@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<LangVersion>12</LangVersion>
+		<Nullable>enable</Nullable>
+		<UseWindowsForms>true</UseWindowsForms>
+		<AssemblyName>TinyBVHNet.Raytracer.Ui</AssemblyName>
+		<RootNamespace>TinyBVHNet.Raytracer.Ui</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\TinyBVHNet.Raytracer\TinyBVHNet.Raytracer.csproj" />
+	</ItemGroup>
+
+	<!-- Copy native DLL to output -->
+	<ItemGroup>
+		<None Include="..\..\native\build\TinyBVHNetNative.dll" CopyToOutputDirectory="PreserveNewest" Link="TinyBVHNetNative.dll" />
+	</ItemGroup>
+
+	<!-- OIDN native DLLs -->
+	<ItemGroup>
+		<None Include="..\TinyBVHNet.Raytracer\oidn\win-x64\*.dll" CopyToOutputDirectory="PreserveNewest" Link="oidn\win-x64\%(Filename)%(Extension)" />
+	</ItemGroup>
+
+
+</Project>

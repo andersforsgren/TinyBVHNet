@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<LangVersion>12</LangVersion>
+		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<RootNamespace>TinyBVHNet.Raytracer</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\TinyBVHNet\TinyBVHNet.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Silk.NET.Vulkan" Version="2.22.0" />
+		<PackageReference Include="Silk.NET.Vulkan.Extensions.KHR" Version="2.22.0" />
+	</ItemGroup>
+
+	<!-- Copy native DLL to output -->
+	<ItemGroup>
+		<None Include="..\..\native\build\TinyBVHNetNative.dll" CopyToOutputDirectory="PreserveNewest" Link="TinyBVHNetNative.dll" />
+	</ItemGroup>
+
+	<!-- OIDN native DLLs — deployed to oidn\win-x64\ subdirectory -->
+	<ItemGroup>
+		<Content Include="oidn\win-x64\*.dll" CopyToOutputDirectory="PreserveNewest" Link="oidn\win-x64\%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<!-- GLSL compute shaders — auto-compiled to SPIR-V via glslc -->
+	<ItemGroup>
+		<GlslShader Include="shaders\*.comp" />
+	</ItemGroup>
+
+	<!-- Compile .comp → .spv before build -->
+	<Target Name="CompileShaders" BeforeTargets="BeforeBuild" Inputs="@(GlslShader)" Outputs="@(GlslShader->'%(RelativeDir)%(Filename).spv')">
+		<Exec Command="glslc &quot;%(GlslShader.Identity)&quot; -o &quot;%(GlslShader.RelativeDir)%(GlslShader.Filename).spv&quot; --target-env=vulkan1.2"
+			  WorkingDirectory="$(MSBuildProjectDirectory)"
+			  ConsoleToMSBuild="true">
+			<Output TaskParameter="ConsoleOutput" PropertyName="_ShaderOutput" />
+		</Exec>
+	</Target>
+
+	<!-- Ensure compiled .spv files are copied to output -->
+	<ItemGroup>
+		<None Include="shaders\*.spv" CopyToOutputDirectory="PreserveNewest" Link="shaders\%(Filename)%(Extension)" />
+	</ItemGroup>
+
+</Project>

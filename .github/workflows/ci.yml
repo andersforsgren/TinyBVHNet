@@ -1,0 +1,206 @@
+name: CI - Build & Test & Pack
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Matrix: build native + run tests for each platform ──────────────────
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            os: windows-latest
+            arch: x64
+            rid: win-x64
+            native_name: TinyBVHNetNative.dll
+            cmake_generator: "Visual Studio 17 2022"
+            cmake_arch: x64
+            test_frameworks: "net48;net8.0"
+            run_tests: true
+          - name: Windows arm64
+            os: windows-latest
+            arch: ARM64
+            rid: win-arm64
+            native_name: TinyBVHNetNative-arm64.dll
+            cmake_generator: "Visual Studio 17 2022"
+            cmake_arch: ARM64
+            test_frameworks: ""
+            run_tests: false  # can't run arm64 native on x64 runner
+          - name: Linux x64
+            os: ubuntu-latest
+            arch: x64
+            rid: linux-x64
+            native_name: libTinyBVHNetNative.so
+            cmake_generator: "Unix Makefiles"
+            cmake_arch: ""
+            test_frameworks: "net8.0"
+            run_tests: true
+          - name: Linux arm64
+            os: ubuntu-latest
+            arch: ARM64
+            rid: linux-arm64
+            native_name: libTinyBVHNetNative-arm64.so
+            cmake_generator: "Unix Makefiles"
+            cmake_arch: ""
+            test_frameworks: ""
+            run_tests: false  # can't run arm64 native on x64 runner
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    defaults:
+      run:
+        shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      # ── Build native library ──────────────────────────────────────────
+      - name: Clean stale CMake cache (if any)
+        run: if (Test-Path native/build) { Remove-Item -Recurse -Force native/build }
+        shell: pwsh
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cmake -B ${{ github.workspace }}/native/build `
+            -G "${{ matrix.cmake_generator }}" `
+            -A ${{ matrix.cmake_arch }} `
+            -DCMAKE_BUILD_TYPE=Release `
+            -S ${{ github.workspace }}/native
+
+      - name: Install ARM64 cross-compiler (Linux)
+        if: runner.os == 'Linux' && matrix.arch == 'ARM64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-aarch64-linux-gnu
+
+      - name: Configure CMake (Linux x64)
+        if: runner.os == 'Linux' && matrix.arch != 'ARM64'
+        run: |
+          cmake -B ${{ github.workspace }}/native/build \
+            -G "${{ matrix.cmake_generator }}" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_FLAGS="-march=native" \
+            -S ${{ github.workspace }}/native
+
+      - name: Configure CMake (Linux arm64 cross-compile)
+        if: runner.os == 'Linux' && matrix.arch == 'ARM64'
+        run: |
+          cmake -B ${{ github.workspace }}/native/build \
+            -G "${{ matrix.cmake_generator }}" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+            -S ${{ github.workspace }}/native
+
+      - name: Build native (Windows)
+        if: runner.os == 'Windows'
+        run: cmake --build ${{ github.workspace }}/native/build --config Release
+
+      - name: Build native (Linux)
+        if: runner.os == 'Linux'
+        run: cmake --build ${{ github.workspace }}/native/build --config Release -j$(nproc)
+
+      - name: Find and rename native binary (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $src = Get-ChildItem -Path native/build -Recurse -Filter "TinyBVHNetNative.dll" | Select-Object -First 1
+          if (-not $src) { throw "Native DLL not found in build output" }
+          New-Item -Force -ItemType Directory -Path build | Out-Null
+          Copy-Item $src.FullName build/${{ matrix.native_name }}
+          Write-Host "Copied $($src.FullName) -> build/${{ matrix.native_name }} ($($src.Length) bytes)"
+
+      - name: Find and rename native binary (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          src=$(find native/build -name "libTinyBVHNetNative.so" -print -quit)
+          if [ -z "$src" ]; then echo "ERROR: Native .so not found"; exit 1; fi
+          mkdir -p build
+          cp "$src" build/${{ matrix.native_name }}
+          echo "Copied $src -> build/${{ matrix.native_name }} ($(stat -c%s build/${{ matrix.native_name }}) bytes)"
+
+      - name: Upload native artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.rid }}
+          path: build/${{ matrix.native_name }}
+          retention-days: 1
+
+      # ── Build .NET library and tests ──────────────────────────────────
+      - name: Build .NET
+        run: dotnet build src/TinyBVHNet/TinyBVHNet.csproj -c Release
+
+      - name: Build tests
+        run: dotnet build src/TinyBVHNet.Tests/TinyBVHNet.Tests.csproj -c Release
+
+      # ── Run tests ─────────────────────────────────────────────────────
+      - name: Run tests (Windows x64, all TFMs)
+        if: matrix.run_tests && runner.os == 'Windows'
+        run: |
+          dotnet test src/TinyBVHNet.Tests/TinyBVHNet.Tests.csproj -c Release -f net8.0 --no-build
+          dotnet test src/TinyBVHNet.Tests/TinyBVHNet.Tests.csproj -c Release -f net48 --no-build
+
+      - name: Run tests (Linux)
+        if: matrix.run_tests && runner.os == 'Linux'
+        run: dotnet test src/TinyBVHNet.Tests/TinyBVHNet.Tests.csproj -c Release -f net8.0 --no-build
+
+  # ── Package: gather all native artifacts and build NuGet ───────────────
+  package:
+    name: Package NuGet
+    runs-on: windows-latest
+    needs: build
+    if: success()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Download all native artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: build
+          merge-multiple: true
+
+      - name: List collected native binaries
+        run: |
+          Write-Host "=== Native binaries collected in build/ ==="
+          Get-ChildItem build -File | ForEach-Object { Write-Host "  $($_.Name): $($_.Length) bytes" }
+
+      - name: Build and pack NuGet
+        run: dotnet pack src/TinyBVHNet/TinyBVHNet.csproj -c Release -o ${{ github.workspace }}/nuget
+
+      - name: Upload NuGet artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: ${{ github.workspace }}/nuget/*.nupkg
+          retention-days: 7

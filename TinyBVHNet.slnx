@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TinyBVHNet/TinyBVHNet.csproj" />
+    <Project Path="src/TinyBVHNet.Raytracer/TinyBVHNet.Raytracer.csproj" />
+    <Project Path="src/TinyBVHNet.Raytracer.Cli/TinyBVHNet.Raytracer.Cli.csproj" />
+    <Project Path="src/TinyBVHNet.Raytracer.Ui/TinyBVHNet.Raytracer.Ui.csproj" />
+    <Project Path="src/TinyBVHNet.Tests/TinyBVHNet.Tests.csproj" />
+  </Folder>
+</Solution>

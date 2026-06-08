@@ -1,0 +1,55 @@
+<Project>
+  <!--
+    TinyBVHNet.targets
+    Deploys the correct native TinyBVHNetNative library to the output directory.
+    Supports: net48 (Windows-only), net8.0 (cross-platform with RID fallback).
+  -->
+
+  <!-- Detect current OS for RID-less builds -->
+  <PropertyGroup>
+    <_TinyBVHNetIsWindows Condition="$([MSBuild]::IsOSPlatform('Windows'))">true</_TinyBVHNetIsWindows>
+    <_TinyBVHNetIsLinux   Condition="$([MSBuild]::IsOSPlatform('Linux'))">true</_TinyBVHNetIsLinux>
+    <_TinyBVHNetIsOSX     Condition="$([MSBuild]::IsOSPlatform('OSX'))">true</_TinyBVHNetIsOSX>
+  </PropertyGroup>
+
+  <!-- Resolve runtime identifier: explicit RID → OS detection → default -->
+  <PropertyGroup>
+    <_TinyBVHNetRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</_TinyBVHNetRid>
+    <_TinyBVHNetRid Condition="'$(_TinyBVHNetRid)' == '' and '$(_TinyBVHNetIsWindows)' == 'true' and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">win-arm64</_TinyBVHNetRid>
+    <_TinyBVHNetRid Condition="'$(_TinyBVHNetRid)' == '' and '$(_TinyBVHNetIsWindows)' == 'true'">win-x64</_TinyBVHNetRid>
+    <_TinyBVHNetRid Condition="'$(_TinyBVHNetRid)' == '' and '$(_TinyBVHNetIsLinux)'   == 'true' and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">linux-arm64</_TinyBVHNetRid>
+    <_TinyBVHNetRid Condition="'$(_TinyBVHNetRid)' == '' and '$(_TinyBVHNetIsLinux)'   == 'true'">linux-x64</_TinyBVHNetRid>
+    <_TinyBVHNetRid Condition="'$(_TinyBVHNetRid)' == '' and '$(_TinyBVHNetIsOSX)'     == 'true'">osx-x64</_TinyBVHNetRid>
+    <_TinyBVHNetRid Condition="'$(_TinyBVHNetRid)' == ''">win-x64</_TinyBVHNetRid>
+  </PropertyGroup>
+
+  <!-- Per-OS native file name -->
+  <PropertyGroup>
+    <_TinyBVHNetNativeName Condition="'$(_TinyBVHNetIsWindows)' == 'true'">TinyBVHNetNative.dll</_TinyBVHNetNativeName>
+    <_TinyBVHNetNativeName Condition="'$(_TinyBVHNetIsLinux)'   == 'true'">libTinyBVHNetNative.so</_TinyBVHNetNativeName>
+    <_TinyBVHNetNativeName Condition="'$(_TinyBVHNetIsOSX)'     == 'true'">libTinyBVHNetNative.dylib</_TinyBVHNetNativeName>
+  </PropertyGroup>
+
+  <!-- net48: Always Windows → copy win-x64 DLL -->
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x64\native\TinyBVHNetNative.dll"
+             CopyToOutputDirectory="PreserveNewest"
+             Link="TinyBVHNetNative.dll"
+             Visible="false" />
+  </ItemGroup>
+
+  <!-- net8.0+: RID-aware copy from runtimes/ -->
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
+    <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\$(_TinyBVHNetRid)\native\*"
+             CopyToOutputDirectory="PreserveNewest"
+             Link="%(Filename)%(Extension)"
+             Visible="false" />
+  </ItemGroup>
+
+  <!-- Emit warning if RID has no native binary -->
+  <Target Name="_TinyBVHNetValidateNative" AfterTargets="ResolvePackageAssets"
+          Condition="!Exists('$(MSBuildThisFileDirectory)..\..\runtimes\$(_TinyBVHNetRid)\native\$(_TinyBVHNetNativeName)')">
+    <Warning Text="TinyBVHNet: No native binary for runtime '$(_TinyBVHNetRid)'. Build the native library first (see native/CMakeLists.txt). Expected: runtimes/$(_TinyBVHNetRid)/native/$(_TinyBVHNetNativeName)" />
+  </Target>
+
+</Project>

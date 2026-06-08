@@ -4,3 +4,9 @@
 *.user
 *.suo
 *.spv
+*.ppm
+/build/
+native/build/
+nuget/
+src/TinyBVHNet/runtimes/
+temp_*

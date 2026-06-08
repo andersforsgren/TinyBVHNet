@@ -1,0 +1,478 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
+
+// Workgroup: one thread per pixel
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+// ── Constants ──────────────────────────────────────────────
+
+#define FLOAT_MAX 1e30f
+#define PI 3.14159265359f
+#define EPSILON 1e-4f
+
+// Scene albedo (monochrome)
+#define ALBEDO 0.7f
+
+// Lighting
+#define SUN_INTENSITY 3.0f
+#define SKY_INTENSITY 1.0f
+
+// Russian roulette
+#define MIN_BOUNCES_BEFORE_RR 3
+#define RR_SURVIVAL 0.7f
+
+// Aila-Laine BVH node: 4 x float4 = 64 bytes
+// Nodes are stored as floats[]; each node is 16 consecutive floats:
+//   [0..2]=lmin, [3]=left, [4..6]=lmax, [7]=right,
+//   [8..10]=rmin, [11]=triCount, [12..14]=rmax, [15]=firstTri
+
+// ── Push constants / uniforms ──────────────────────────────
+
+layout(push_constant) uniform Params {
+    uint  imageWidth;
+    uint  imageHeight;
+    uint  maxBounces;
+    uint  frameSeed;    // seed for RNG, incremented each frame
+    float cameraPosX, cameraPosY, cameraPosZ;
+    float cameraUX,  cameraUY,  cameraUZ;
+    float cameraVX,  cameraVY,  cameraVZ;
+    float cameraWX,  cameraWY,  cameraWZ;
+    float halfWidth, halfHeight;
+    float sunDirX, sunDirY, sunDirZ;
+} params;
+
+// ── SSBO bindings ──────────────────────────────────────────
+
+// BVH nodes: flattened float array (nodeCount * 16 floats)
+layout(std430, binding = 0) readonly buffer BvhNodes {
+    float nodes[];
+};
+
+// Primitive index permutation (triCount uints)
+layout(std430, binding = 1) readonly buffer PrimIndices {
+    uint primIndices[];
+};
+
+// Vertex data: triCount * 3 float4s, stored as floats (triCount * 12 floats)
+layout(std430, binding = 2) readonly buffer Vertices {
+    float vertices[];
+};
+
+// Pre-computed triangle data: triCount * 3 float4s (edge1, edge2, face normal)
+//   [i*12+0..2] = edge1,  [i*12+3]   = pad
+//   [i*12+4..6] = edge2,  [i*12+7]   = pad
+//   [i*12+8..10]= normal, [i*12+11]  = pad
+layout(std430, binding = 4) readonly buffer TriData {
+    float triData[];
+};
+
+// Output image: width * height * 3 floats (HDR RGB, then mapped to LDR on write)
+layout(std430, binding = 3) buffer OutputImage {
+    float pixels[]; // accumulated radiance per pixel (3 floats per pixel)
+};
+
+// ── RNG (PCG hash) ─────────────────────────────────────────
+
+uint rngState;
+
+void rngInit(uint pixelIndex, uint sampleIndex)
+{
+    rngState = pixelIndex * 1664525u + sampleIndex * 1013904223u + params.frameSeed * 0x9e3779b9u;
+}
+
+uint rngNext()
+{
+    rngState = rngState * 1664525u + 1013904223u;
+    uint word = ((rngState >> ((rngState >> 28u) + 4u)) ^ rngState) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+float rngFloat()
+{
+    return float(rngNext()) / float(0xFFFFFFFFu);
+}
+
+// ── Vector helpers ─────────────────────────────────────────
+
+float dot3(float ax, float ay, float az, float bx, float by, float bz)
+{
+    return ax * bx + ay * by + az * bz;
+}
+
+float length3(float x, float y, float z)
+{
+    return sqrt(x * x + y * y + z * z);
+}
+
+vec3 normalize3(float x, float y, float z)
+{
+    float invLen = 1.0f / length3(x, y, z);
+    return vec3(x * invLen, y * invLen, z * invLen);
+}
+
+vec3 normalize3(vec3 v)
+{
+    float invLen = 1.0f / length(v);
+    return v * invLen;
+}
+
+vec3 cross3(float ax, float ay, float az, float bx, float by, float bz)
+{
+    return vec3(ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx);
+}
+
+// ── AABB intersection (slab test) ──────────────────────────
+// Returns entry distance via entryDist out-param for BVH ordering.
+
+bool intersectAABB(
+    float bminX, float bminY, float bminZ,
+    float bmaxX, float bmaxY, float bmaxZ,
+    float rdx, float rdy, float rdz,
+    float ox, float oy, float oz,
+    float tMin, inout float tMax,
+    out float entryDist)
+{
+    float tx1 = (bminX - ox) * rdx;
+    float tx2 = (bmaxX - ox) * rdx;
+    float tNearX = min(tx1, tx2);
+    float tFarX  = max(tx1, tx2);
+    tMax = min(tMax, tFarX);
+    float tNear = max(tMin, tNearX);
+
+    float ty1 = (bminY - oy) * rdy;
+    float ty2 = (bmaxY - oy) * rdy;
+    float tNearY = min(ty1, ty2);
+    float tFarY  = max(ty1, ty2);
+    tMax = min(tMax, tFarY);
+    tNear = max(tNear, tNearY);
+
+    float tz1 = (bminZ - oz) * rdz;
+    float tz2 = (bmaxZ - oz) * rdz;
+    float tNearZ = min(tz1, tz2);
+    float tFarZ  = max(tz1, tz2);
+    tMax = min(tMax, tFarZ);
+    tNear = max(tNear, tNearZ);
+
+    entryDist = tNear;
+    return tNear <= tMax;
+}
+
+// ── Möller-Trumbore triangle intersection (pre-computed edges) ──
+
+bool intersectTri(
+    float ox, float oy, float oz,
+    float dx, float dy, float dz,
+    float e1x, float e1y, float e1z,
+    float e2x, float e2y, float e2z,
+    float v0x, float v0y, float v0z,
+    inout float t, inout float u, inout float v)
+{
+    float hx = dy * e2z - dz * e2y;
+    float hy = dz * e2x - dx * e2z;
+    float hz = dx * e2y - dy * e2x;
+
+    float a = e1x * hx + e1y * hy + e1z * hz;
+    if (abs(a) < 1e-7f) return false;
+
+    float f = 1.0f / a;
+    float sx = ox - v0x, sy = oy - v0y, sz = oz - v0z;
+    float uu = f * (sx * hx + sy * hy + sz * hz);
+    if (uu < 0.0f || uu > 1.0f) return false;
+
+    float qx = sy * e1z - sz * e1y;
+    float qy = sz * e1x - sx * e1z;
+    float qz = sx * e1y - sy * e1x;
+    float vv = f * (dx * qx + dy * qy + dz * qz);
+    if (vv < 0.0f || uu + vv > 1.0f) return false;
+
+    float tt = f * (e2x * qx + e2y * qy + e2z * qz);
+    if (tt <= 0.0f || tt >= t) return false;
+
+    t = tt;
+    u = uu;
+    v = vv;
+    return true;
+}
+
+// ── Aila-Laine BVH traversal ───────────────────────────────
+
+bool traverseBVH(
+    float ox, float oy, float oz,
+    float dx, float dy, float dz,
+    inout float t, inout float u, inout float v,
+    inout uint hitTri)
+{
+    float rdx = 1.0f / dx;
+    float rdy = 1.0f / dy;
+    float rdz = 1.0f / dz;
+
+    // Stack of node indices
+    uint stack[64];
+    int stackPtr = 0;
+
+    uint nodeIdx = 0u; // start at root
+    bool hit = false;
+
+    while (true)
+    {
+        uint base = nodeIdx * 16u;
+
+        // Read child bounds
+        float lminX = nodes[base + 0], lminY = nodes[base + 1], lminZ = nodes[base + 2];
+        uint  left   = floatBitsToUint(nodes[base + 3]);
+        float lmaxX = nodes[base + 4], lmaxY = nodes[base + 5], lmaxZ = nodes[base + 6];
+        uint  right  = floatBitsToUint(nodes[base + 7]);
+        float rminX = nodes[base + 8], rminY = nodes[base + 9], rminZ = nodes[base + 10];
+        uint  triCount = floatBitsToUint(nodes[base + 11]);
+        float rmaxX = nodes[base + 12], rmaxY = nodes[base + 13], rmaxZ = nodes[base + 14];
+        uint  firstTri = floatBitsToUint(nodes[base + 15]);
+
+        if (triCount > 0u)
+        {
+            // Leaf node -- test each triangle using pre-computed edges
+            for (uint i = 0u; i < triCount; i++)
+            {
+                uint triIdx;
+                if (primIndices.length() > 0u)
+                    triIdx = primIndices[firstTri + i];
+                else
+                    triIdx = firstTri + i;
+
+                // Pre-computed triangle data: 3 float4 per triangle (12 floats)
+                // [0..2]=edge1, [3]=pad, [4..6]=edge2, [7]=pad, [8..10]=normal, [11]=pad
+                uint tbase = triIdx * 12u;
+                float e1x = triData[tbase + 0], e1y = triData[tbase + 1], e1z = triData[tbase + 2];
+                float e2x = triData[tbase + 4], e2y = triData[tbase + 5], e2z = triData[tbase + 6];
+
+                // v0 from vertices buffer
+                uint vbase = triIdx * 12u;
+                float v0x = vertices[vbase + 0], v0y = vertices[vbase + 1], v0z = vertices[vbase + 2];
+
+                if (intersectTri(ox, oy, oz, dx, dy, dz, e1x, e1y, e1z, e2x, e2y, e2z, v0x, v0y, v0z, t, u, v))
+                {
+                    hitTri = triIdx;
+                    hit = true;
+                }
+            }
+
+            // Pop from stack
+            if (stackPtr == 0) break;
+            nodeIdx = stack[--stackPtr];
+        }
+        else
+        {
+            // Internal node — test both child AABBs
+            float tMaxL = t, tMaxR = t;
+            float eL, eR;
+            bool hitL = intersectAABB(lminX, lminY, lminZ, lmaxX, lmaxY, lmaxZ, rdx, rdy, rdz, ox, oy, oz, 0.0f, tMaxL, eL);
+            bool hitR = intersectAABB(rminX, rminY, rminZ, rmaxX, rmaxY, rmaxZ, rdx, rdy, rdz, ox, oy, oz, 0.0f, tMaxR, eR);
+
+            if (hitL && hitR)
+            {
+                // Near-first ordering: traverse closer child, push farther
+                if (eL < eR)
+                {
+                    stack[stackPtr++] = right;
+                    nodeIdx = left;
+                }
+                else
+                {
+                    stack[stackPtr++] = left;
+                    nodeIdx = right;
+                }
+            }
+            else if (hitL)
+            {
+                nodeIdx = left;
+            }
+            else if (hitR)
+            {
+                nodeIdx = right;
+            }
+            else
+            {
+                // Both miss — pop
+                if (stackPtr == 0) break;
+                nodeIdx = stack[--stackPtr];
+            }
+        }
+    }
+
+    return hit;
+}
+
+bool isOccluded(
+    float ox, float oy, float oz,
+    float dx, float dy, float dz,
+    float maxDist)
+{
+    float t = maxDist;
+    float u, v;
+    uint hitTri;
+    return traverseBVH(ox, oy, oz, dx, dy, dz, t, u, v, hitTri);
+}
+
+// ── Sky radiance ───────────────────────────────────────────
+
+float skyRadiance(float dx, float dy, float dz)
+{
+    float y = max(dy, 0.0f); // sky dome in +Y (match CPU Demo)
+    float sky = SKY_INTENSITY * (0.3f + 0.7f * y);
+
+    // Sun disk
+    float cosTheta = dx * params.sunDirX + dy * params.sunDirY + dz * params.sunDirZ;
+    float sunDisk = cosTheta > 0.9999f ? SUN_INTENSITY * 100.0f : 0.0f;
+
+    return sky + sunDisk;
+}
+
+// ── Cosine-weighted hemisphere sampling ────────────────────
+
+void sampleCosineHemisphere(float nx, float ny, float nz, out float wx, out float wy, out float wz)
+{
+    float r1 = rngFloat();
+    float r2 = rngFloat();
+    float phi = 2.0f * PI * r1;
+    float r = sqrt(r2);
+
+    // Build local frame
+    vec3 u, v;
+    vec3 n = vec3(nx, ny, nz);
+    if (abs(n.x) > 0.9f)
+        u = normalize3(cross3(0.0f, 1.0f, 0.0f, n.x, n.y, n.z));
+    else
+        u = normalize3(cross3(0.0f, 0.0f, 1.0f, n.x, n.y, n.z));
+    v = cross3(n.x, n.y, n.z, u.x, u.y, u.z);
+
+    float lx = r * cos(phi);
+    float ly = sqrt(1.0f - r2);
+    float lz = r * sin(phi);
+
+    wx = lx * u.x + ly * n.x + lz * v.x;
+    wy = lx * u.y + ly * n.y + lz * v.y;
+    wz = lx * u.z + ly * n.z + lz * v.z;
+}
+
+// ── Compute triangle normal (from pre-computed data) ──────
+
+void computeNormal(uint triIndex, out float nx, out float ny, out float nz)
+{
+    uint tbase = triIndex * 12u;
+    nx = triData[tbase + 8];
+    ny = triData[tbase + 9];
+    nz = triData[tbase + 10];
+}
+
+// ── Path tracing ───────────────────────────────────────────
+
+float pathTrace(
+    float ox, float oy, float oz,
+    float dx, float dy, float dz)
+{
+    float throughput = 1.0f;
+    float radiance = 0.0f;
+
+    for (uint bounce = 0u; bounce <= params.maxBounces; bounce++)
+    {
+        // Guard against degenerate rays
+        if (length3(dx, dy, dz) < 1e-12f) break;
+
+        float t = FLOAT_MAX;
+        float uu, vv;
+        uint hitTri = 0xFFFFFFFFu;
+        bool hit = traverseBVH(ox, oy, oz, dx, dy, dz, t, uu, vv, hitTri);
+
+        if (!hit)
+        {
+            // Hit the sky
+            radiance += throughput * skyRadiance(dx, dy, dz);
+            break;
+        }
+
+        // Hit point
+        float hx = ox + dx * t;
+        float hy = oy + dy * t;
+        float hz = oz + dz * t;
+
+        // Compute normal
+        float nx, ny, nz;
+        computeNormal(hitTri, nx, ny, nz);
+
+        // Flip normal to face the ray
+        if (dot3(dx, dy, dz, nx, ny, nz) > 0.0f)
+        {
+            nx = -nx; ny = -ny; nz = -nz;
+        }
+
+        // Offset hit point to avoid self-intersection
+        float px = hx + nx * EPSILON;
+        float py = hy + ny * EPSILON;
+        float pz = hz + nz * EPSILON;
+
+        // ── Direct lighting: NEE sun ──
+        float nDotSun = max(0.0f, dot3(params.sunDirX, params.sunDirY, params.sunDirZ, nx, ny, nz));
+        float sunVis = isOccluded(px, py, pz, params.sunDirX, params.sunDirY, params.sunDirZ, FLOAT_MAX) ? 0.0f : 1.0f;
+        radiance += throughput * ALBEDO * SUN_INTENSITY * nDotSun * sunVis;
+
+        // ── Indirect bounce ──
+        float wix, wiy, wiz;
+        sampleCosineHemisphere(nx, ny, nz, wix, wiy, wiz);
+
+        // BRDF = albedo / PI, pdf = (n·wi) / PI, they cancel → multiplied by albedo
+        throughput *= ALBEDO;
+
+        ox = px; oy = py; oz = pz;
+        dx = wix; dy = wiy; dz = wiz;
+
+        // Russian roulette
+        if (bounce >= MIN_BOUNCES_BEFORE_RR)
+        {
+            float p = min(throughput, RR_SURVIVAL);
+            if (rngFloat() > p) break;
+            throughput /= p;
+        }
+    }
+
+    return radiance;
+}
+
+// ── Main compute kernel ────────────────────────────────────
+
+void main()
+{
+    uint px = gl_GlobalInvocationID.x;
+    uint py = gl_GlobalInvocationID.y;
+
+    if (px >= params.imageWidth || py >= params.imageHeight)
+        return;
+
+    uint pixelIndex = py * params.imageWidth + px;
+    rngInit(pixelIndex, 0u);
+
+    // Jittered primary ray
+    float jx = rngFloat();
+    float jy = rngFloat();
+    float sx = ((float(px) + jx) / float(params.imageWidth)) * 2.0f - 1.0f;
+    float sy = 1.0f - 2.0f * (float(py) + jy) / float(params.imageHeight);
+
+    float rx = -params.cameraWX + sx * params.halfWidth * params.cameraUX + sy * params.halfHeight * params.cameraVX;
+    float ry = -params.cameraWY + sx * params.halfWidth * params.cameraUY + sy * params.halfHeight * params.cameraVY;
+    float rz = -params.cameraWZ + sx * params.halfWidth * params.cameraUZ + sy * params.halfHeight * params.cameraVZ;
+
+    float invLen = 1.0f / sqrt(rx * rx + ry * ry + rz * rz);
+    rx *= invLen;
+    ry *= invLen;
+    rz *= invLen;
+
+    float rad = pathTrace(params.cameraPosX, params.cameraPosY, params.cameraPosZ, rx, ry, rz);
+
+    // Clamp fireflies, output raw HDR (caller tonemaps)
+    rad = min(rad, 100.0f);
+
+    // Store 1-sample raw HDR (RGBA layout: 4 floats per pixel)
+    uint outIndex = pixelIndex * 4u;
+    pixels[outIndex + 0] = rad;
+    pixels[outIndex + 1] = rad;
+    pixels[outIndex + 2] = rad;
+    pixels[outIndex + 3] = 0.0f;
+}
