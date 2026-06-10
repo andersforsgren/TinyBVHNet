@@ -34,8 +34,20 @@ if(MSVC)
     else()
         target_compile_options(TinyBVHNetNative PRIVATE /O2 /arch:AVX2)
     endif()
+elseif(MINGW)
+    # MinGW-w64 on Windows (cross-compiler or native)
+    # -fno-strict-aliasing is needed because tinybvh uses type punning via
+    # pointer casts (e.g. *(float*)&uint32_var) which violates strict aliasing.
+    target_compile_options(TinyBVHNetNative PRIVATE -O3 -mavx2 -mfma -fno-strict-aliasing)
+    # Static link to avoid runtime dependencies on libstdc++/libgcc DLLs
+    target_link_options(TinyBVHNetNative PRIVATE -static-libgcc -static-libstdc++ -static)
+    set_target_properties(TinyBVHNetNative PROPERTIES
+        WINDOWS_EXPORT_ALL_SYMBOLS TRUE
+        PREFIX ""   # suppress "lib" prefix on Windows DLLs
+    )
 else()
-    target_compile_options(TinyBVHNetNative PRIVATE -O3)
+    # Linux/macOS (GCC or Clang)
+    target_compile_options(TinyBVHNetNative PRIVATE -O3 -mavx2 -mfma)
 endif()
 
 # Install targets

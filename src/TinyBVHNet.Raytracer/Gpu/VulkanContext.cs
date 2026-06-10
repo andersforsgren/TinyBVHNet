@@ -47,12 +47,12 @@ public unsafe class VulkanContext : System.IDisposable
     static VulkanContext()
     {
         if (Vk is null)
-            throw new System.Exception("Failed to load Vulkan API – ensure a Vulkan driver is installed.");
+            throw new System.Exception("Failed to load Vulkan API - ensure a Vulkan driver is installed.");
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ===========================================================
     //  Public API
-    // ═══════════════════════════════════════════════════════════
+    // ===========================================================
 
     public void Initialize(int width, int height)
     {
@@ -150,9 +150,9 @@ public unsafe class VulkanContext : System.IDisposable
         return reqs.Size;
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ===========================================================
     //  Initialization Steps
-    // ═══════════════════════════════════════════════════════════
+    // ===========================================================
 
     private void CreateInstance()
     {
@@ -358,9 +358,9 @@ public unsafe class VulkanContext : System.IDisposable
         Vk.CreateFence(_device, &info, null, out _fence).ThrowOnError("CreateFence");
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ===========================================================
     //  Descriptor Sets & Buffers
-    // ═══════════════════════════════════════════════════════════
+    // ===========================================================
 
     private void CreateDescriptorSet()
     {
@@ -475,9 +475,9 @@ public unsafe class VulkanContext : System.IDisposable
         Vk.UnmapMemory(_device, memory);
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ===========================================================
     //  Cleanup
-    // ═══════════════════════════════════════════════════════════
+    // ===========================================================
 
     public void Dispose()
     {
@@ -514,9 +514,9 @@ public unsafe class VulkanContext : System.IDisposable
         if (memory.Handle != 0) Vk.FreeMemory(_device, memory, null);
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ===========================================================
     //  Push Constant Layout (matches shader)
-    // ═══════════════════════════════════════════════════════════
+    // ===========================================================
 
     [StructLayout(LayoutKind.Sequential)]
     public struct GpuParams

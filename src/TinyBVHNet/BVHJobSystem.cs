@@ -1,24 +1,14 @@
 namespace TinyBVHNet;
 
 /// <summary>
-/// Managed wrapper around TinyBVH's JobSystem — a simple thread pool
+/// Managed wrapper around TinyBVH's JobSystem -- a simple thread pool
 /// for parallel BVH building tasks.
 /// </summary>
-public class BVHJobSystem : IDisposable
+public class BVHJobSystem : NativeObject
 {
-    private IntPtr _handle;
-    private bool _disposed;
-
-    private void ThrowIfDisposed()
-    {
-        if (_disposed) throw new ObjectDisposedException(nameof(BVHJobSystem));
-    }
-
     public BVHJobSystem()
+        : base(NativeMethods.TBVH_JobSystem_Create(), NativeMethods.TBVH_JobSystem_Destroy)
     {
-        _handle = NativeMethods.TBVH_JobSystem_Create();
-        if (_handle == IntPtr.Zero)
-            throw new InvalidOperationException("Failed to create native JobSystem instance.");
     }
 
     /// <summary>Returns true if any job is still running.</summary>
@@ -26,19 +16,7 @@ public class BVHJobSystem : IDisposable
     {
         get
         {
-            ThrowIfDisposed();
-            return NativeMethods.TBVH_JobSystem_IsBusy(_handle) != 0;
+            return NativeMethods.TBVH_JobSystem_IsBusy(Handle) != 0;
         }
-    }
-
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            NativeMethods.TBVH_JobSystem_Destroy(_handle);
-            _handle = IntPtr.Zero;
-            _disposed = true;
-        }
-        GC.SuppressFinalize(this);
     }
 }

@@ -4,7 +4,7 @@
 // Workgroup: one thread per pixel
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-// ── Constants ──────────────────────────────────────────────
+// -- Constants ----------------------------------------------
 
 #define FLOAT_MAX 1e30f
 #define PI 3.14159265359f
@@ -26,7 +26,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 //   [0..2]=lmin, [3]=left, [4..6]=lmax, [7]=right,
 //   [8..10]=rmin, [11]=triCount, [12..14]=rmax, [15]=firstTri
 
-// ── Push constants / uniforms ──────────────────────────────
+// -- Push constants / uniforms ------------------------------
 
 layout(push_constant) uniform Params {
     uint  imageWidth;
@@ -41,7 +41,7 @@ layout(push_constant) uniform Params {
     float sunDirX, sunDirY, sunDirZ;
 } params;
 
-// ── SSBO bindings ──────────────────────────────────────────
+// -- SSBO bindings ------------------------------------------
 
 // BVH nodes: flattened float array (nodeCount * 16 floats)
 layout(std430, binding = 0) readonly buffer BvhNodes {
@@ -71,7 +71,7 @@ layout(std430, binding = 3) buffer OutputImage {
     float pixels[]; // accumulated radiance per pixel (3 floats per pixel)
 };
 
-// ── RNG (PCG hash) ─────────────────────────────────────────
+// -- RNG (PCG hash) -----------------------------------------
 
 uint rngState;
 
@@ -92,7 +92,7 @@ float rngFloat()
     return float(rngNext()) / float(0xFFFFFFFFu);
 }
 
-// ── Vector helpers ─────────────────────────────────────────
+// -- Vector helpers -----------------------------------------
 
 float dot3(float ax, float ay, float az, float bx, float by, float bz)
 {
@@ -121,7 +121,7 @@ vec3 cross3(float ax, float ay, float az, float bx, float by, float bz)
     return vec3(ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx);
 }
 
-// ── AABB intersection (slab test) ──────────────────────────
+// -- AABB intersection (slab test) --------------------------
 // Returns entry distance via entryDist out-param for BVH ordering.
 
 bool intersectAABB(
@@ -157,7 +157,7 @@ bool intersectAABB(
     return tNear <= tMax;
 }
 
-// ── Möller-Trumbore triangle intersection (pre-computed edges) ──
+// -- Moller-Trumbore triangle intersection (pre-computed edges) --
 
 bool intersectTri(
     float ox, float oy, float oz,
@@ -194,7 +194,7 @@ bool intersectTri(
     return true;
 }
 
-// ── Aila-Laine BVH traversal ───────────────────────────────
+// -- Aila-Laine BVH traversal -------------------------------
 
 bool traverseBVH(
     float ox, float oy, float oz,
@@ -261,7 +261,7 @@ bool traverseBVH(
         }
         else
         {
-            // Internal node — test both child AABBs
+            // Internal node -- test both child AABBs
             float tMaxL = t, tMaxR = t;
             float eL, eR;
             bool hitL = intersectAABB(lminX, lminY, lminZ, lmaxX, lmaxY, lmaxZ, rdx, rdy, rdz, ox, oy, oz, 0.0f, tMaxL, eL);
@@ -291,7 +291,7 @@ bool traverseBVH(
             }
             else
             {
-                // Both miss — pop
+                // Both miss -- pop
                 if (stackPtr == 0) break;
                 nodeIdx = stack[--stackPtr];
             }
@@ -312,7 +312,7 @@ bool isOccluded(
     return traverseBVH(ox, oy, oz, dx, dy, dz, t, u, v, hitTri);
 }
 
-// ── Sky radiance ───────────────────────────────────────────
+// -- Sky radiance -------------------------------------------
 
 float skyRadiance(float dx, float dy, float dz)
 {
@@ -326,7 +326,7 @@ float skyRadiance(float dx, float dy, float dz)
     return sky + sunDisk;
 }
 
-// ── Cosine-weighted hemisphere sampling ────────────────────
+// -- Cosine-weighted hemisphere sampling --------------------
 
 void sampleCosineHemisphere(float nx, float ny, float nz, out float wx, out float wy, out float wz)
 {
@@ -353,7 +353,7 @@ void sampleCosineHemisphere(float nx, float ny, float nz, out float wx, out floa
     wz = lx * u.z + ly * n.z + lz * v.z;
 }
 
-// ── Compute triangle normal (from pre-computed data) ──────
+// -- Compute triangle normal (from pre-computed data) ------
 
 void computeNormal(uint triIndex, out float nx, out float ny, out float nz)
 {
@@ -363,7 +363,7 @@ void computeNormal(uint triIndex, out float nx, out float ny, out float nz)
     nz = triData[tbase + 10];
 }
 
-// ── Path tracing ───────────────────────────────────────────
+// -- Path tracing -------------------------------------------
 
 float pathTrace(
     float ox, float oy, float oz,
@@ -409,16 +409,16 @@ float pathTrace(
         float py = hy + ny * EPSILON;
         float pz = hz + nz * EPSILON;
 
-        // ── Direct lighting: NEE sun ──
+        // -- Direct lighting: NEE sun --
         float nDotSun = max(0.0f, dot3(params.sunDirX, params.sunDirY, params.sunDirZ, nx, ny, nz));
         float sunVis = isOccluded(px, py, pz, params.sunDirX, params.sunDirY, params.sunDirZ, FLOAT_MAX) ? 0.0f : 1.0f;
         radiance += throughput * ALBEDO * SUN_INTENSITY * nDotSun * sunVis;
 
-        // ── Indirect bounce ──
+        // -- Indirect bounce --
         float wix, wiy, wiz;
         sampleCosineHemisphere(nx, ny, nz, wix, wiy, wiz);
 
-        // BRDF = albedo / PI, pdf = (n·wi) / PI, they cancel → multiplied by albedo
+        // BRDF = albedo / PI, pdf = (n-wi) / PI, they cancel -> multiplied by albedo
         throughput *= ALBEDO;
 
         ox = px; oy = py; oz = pz;
@@ -436,7 +436,7 @@ float pathTrace(
     return radiance;
 }
 
-// ── Main compute kernel ────────────────────────────────────
+// -- Main compute kernel ------------------------------------
 
 void main()
 {

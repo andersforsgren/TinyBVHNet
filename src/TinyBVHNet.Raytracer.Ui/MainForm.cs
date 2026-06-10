@@ -19,7 +19,7 @@ namespace TinyBVHNet.Raytracer.Ui;
 /// </summary>
 public sealed class MainForm : Form
 {
-    // ── Settings ──────────────────────────────────────────────
+    // -- Settings ----------------------------------------------
     private const int ImageWidth = 1280;
     private const int ImageHeight = 800;
 
@@ -27,7 +27,7 @@ public sealed class MainForm : Form
     private int _maxBounces = 3;
     private float _exposure = 1.5f;
 
-    // ── Camera state ──────────────────────────────────────────
+    // -- Camera state ------------------------------------------
     private Vector3 _lookAt = new(0f, 2f, 0f);
     private float _yaw;          // radians around Y axis
     private float _pitch = 0.3f;  // radians above horizon
@@ -45,14 +45,14 @@ public sealed class MainForm : Form
         }
     }
 
-    // ── Render state ──────────────────────────────────────────
+    // -- Render state ------------------------------------------
     private IRenderer? _renderer;
     private float[]? _accumBuffer;   // RGB interleaved, length = W*H*3
     private int _sampleCount;
     private long _cameraGeneration;  // bumped when camera moves; stale frames discarded
     private readonly object _bufferLock = new();
 
-    // ── Denoising ─────────────────────────────────────────────
+    // -- Denoising ---------------------------------------------
     private bool _denoiseEnabled;
     private OidnDenoiser? _denoiser;
 
@@ -60,30 +60,30 @@ public sealed class MainForm : Form
     private readonly byte[] _displayBytes = new byte[ImageWidth * ImageHeight * 3];
     private readonly int[] _displayPixels = new int[ImageWidth * ImageHeight]; // ARGB packed
 
-    // ── Performance ───────────────────────────────────────────
+    // -- Performance -------------------------------------------
     private readonly Stopwatch _frameTimer = Stopwatch.StartNew();
     private double _lastFrameMs;
     private double _mraysPerSec;
     private long _totalRays;
 
-    // ── Convergence ──────────────────────────────────────────
+    // -- Convergence ------------------------------------------
     private float[]? _lastAveragedFrame;  // averaged HDR from previous sample
     private double _convergenceDelta;     // mean per-pixel relative luminance error (0..1)
 
-    // ── Render thread ─────────────────────────────────────────
+    // -- Render thread -----------------------------------------
     private CancellationTokenSource _renderCts = new();
     private Task? _renderTask;
 
-    // ── Mouse interaction ────────────────────────────────────
+    // -- Mouse interaction ------------------------------------
     private bool _isDragging;
     private Point _lastMousePos;
-    private bool _panMode; // Ctrl held → pan instead of orbit
+    private bool _panMode; // Ctrl held -> pan instead of orbit
     private string scenePath = null!;
 
-    // ══════════════════════════════════════════════════════════
+    // ==========================================================
     public MainForm()
     {
-        Text = "TinyBVHNet — Interactive Ray Tracer";
+        Text = "TinyBVHNet -- Interactive Ray Tracer";
         ClientSize = new Size(ImageWidth, ImageHeight);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
@@ -95,9 +95,9 @@ public sealed class MainForm : Form
 
     
 
-    // ══════════════════════════════════════════════════════════
+    // ==========================================================
     //  Lifecycle
-    // ══════════════════════════════════════════════════════════
+    // ==========================================================
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
@@ -122,7 +122,7 @@ public sealed class MainForm : Form
         using var g = CreateGraphics();
         g.Clear(Color.Black);
         DrawOverlay(g, "Loading scene...", 0, 0, 0);
-        Text = "TinyBVHNet — Loading...";
+        Text = "TinyBVHNet -- Loading...";
 
         Task.Run(() =>
         {
@@ -135,7 +135,7 @@ public sealed class MainForm : Form
                     ? new Cpu.CpuRenderer(scene, ImageWidth, ImageHeight)
                     : new Gpu.GpuRenderer(scene, ImageWidth, ImageHeight);
                 lock (_bufferLock) { _accumBuffer = accum; _sampleCount = 0; }
-                Text = $"TinyBVHNet — {(IsCpu ? "CPU" : "GPU")} | {scene.TriangleCount} tris";
+                Text = $"TinyBVHNet -- {(IsCpu ? "CPU" : "GPU")} | {scene.TriangleCount} tris";
                 StartRenderLoopInternal(_renderCts.Token);
             });
         });
@@ -150,9 +150,9 @@ public sealed class MainForm : Form
         base.OnFormClosed(e);
     }
 
-    // ══════════════════════════════════════════════════════════
+    // ==========================================================
     //  Renderer
-    // ══════════════════════════════════════════════════════════
+    // ==========================================================
     private bool IsCpu => !_useGpu; // GPU requires Vulkan
 
     private void CreateRenderer(ObjParser.Scene scene)
@@ -181,13 +181,13 @@ public sealed class MainForm : Form
 
                 lock (_bufferLock)
                 {
-                    // Stale frame — camera moved during render
+                    // Stale frame -- camera moved during render
                     if (gen != _cameraGeneration) continue;
                     if (_accumBuffer == null) break;
                     int len = _accumBuffer.Length;
 
                     // Normalize channels: CPU returns mono (W*H), GPU returns RGB (W*H*3)
-                    if (hdr.Length == len / 3) // mono → replicate to RGB
+                    if (hdr.Length == len / 3) // mono -> replicate to RGB
                     {
                         for (int i = 0; i < hdr.Length; i++)
                         {
@@ -210,7 +210,7 @@ public sealed class MainForm : Form
                     // Estimate MRay/s: W*H rays primary + ~2*bounces shadow/indirect per pixel
                     long raysThisFrame = (long)ImageWidth * ImageHeight * (1 + 2 * _maxBounces);
                     _totalRays += raysThisFrame;
-                    _mraysPerSec = raysThisFrame / (frameMs * 1e3); // rays / (ms*1000 → sec) / 1e6
+                    _mraysPerSec = raysThisFrame / (frameMs * 1e3); // rays / (ms*1000 -> sec) / 1e6
 
                     // Tonemap and update display bitmap
                     UpdateDisplayBitmap();
@@ -236,7 +236,7 @@ public sealed class MainForm : Form
         int len = _accumBuffer.Length;
         float invSpp = 1f / _sampleCount;
 
-        // ── Convergence: mean absolute luminance change, normalized by image mean luminance ──
+        // -- Convergence: mean absolute luminance change, normalized by image mean luminance --
         if (_lastAveragedFrame != null && _lastAveragedFrame.Length == len)
         {
             double totalAbsErr = 0;
@@ -264,7 +264,7 @@ public sealed class MainForm : Form
         }
         else
         {
-            // First frame — just store the averaged frame
+            // First frame -- just store the averaged frame
             if (_lastAveragedFrame == null || _lastAveragedFrame.Length != len)
                 _lastAveragedFrame = new float[len];
             for (int i = 0; i < len; i++)
@@ -332,9 +332,9 @@ public sealed class MainForm : Form
         Invalidate();
     }
 
-    // ══════════════════════════════════════════════════════════
+    // ==========================================================
     //  Paint
-    // ══════════════════════════════════════════════════════════
+    // ==========================================================
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics;
@@ -349,7 +349,7 @@ public sealed class MainForm : Form
         string rendererName = IsCpu ? "CPU (G: Toggle GPU)" : "GPU (G: Toggle CPU)";
         string oidnTag = _denoiseEnabled ? " | Denoise ON (D: Enable)" : " | Denoise OFF (D: Disable)";
         string convText = _sampleCount > 1
-            ? $" | Δ {_convergenceDelta * 100:F2}%"
+            ? $" | Delta {_convergenceDelta * 100:F2}%"
             : "";
         DrawOverlay(g,
             $"{rendererName}{oidnTag} | {_sampleCount} spp | {_mraysPerSec:F2} MRay/s | {_lastFrameMs:F1} ms/frame{convText}",
@@ -376,9 +376,9 @@ public sealed class MainForm : Form
         g.DrawString(text, font, textBrush, padX, padY);
     }
 
-    // ══════════════════════════════════════════════════════════
+    // ==========================================================
     //  Keyboard
-    // ══════════════════════════════════════════════════════════
+    // ==========================================================
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
@@ -460,9 +460,9 @@ public sealed class MainForm : Form
         StartRenderLoopInternal(_renderCts.Token);
     }
 
-    // ══════════════════════════════════════════════════════════
-    //  Mouse — camera controls
-    // ══════════════════════════════════════════════════════════
+    // ==========================================================
+    //  Mouse -- camera controls
+    // ==========================================================
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);

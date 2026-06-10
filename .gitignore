@@ -10,3 +10,5 @@ native/build/
 nuget/
 src/TinyBVHNet/runtimes/
 temp_*
+
+lfs/

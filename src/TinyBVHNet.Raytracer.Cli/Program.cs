@@ -220,7 +220,7 @@ public static class Program
         double mrays = estimatedRays / (totalGpu.TotalSeconds * 1e6);
         Console.WriteLine($"  GPU total: {totalGpu.TotalSeconds:F3}s | {mrays:F2} MRay/s");
 
-        // Tonemap and convert to bytes (GPU returns interleaved RGB — extract green as mono)
+        // Tonemap and convert to bytes (GPU returns interleaved RGB -- extract green as mono)
         Console.WriteLine("Tonemapping and writing output...");
         var ldr = new float[width * height];
         for (int i = 0; i < width * height; i++)

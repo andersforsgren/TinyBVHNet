@@ -79,7 +79,7 @@ public unsafe class GpuRenderer : IRenderer, IDisposable
 
     /// <inheritdoc />
     /// <remarks>Always dispatches exactly 1 sample per pixel. The output is raw HDR
-    /// (non-tonemapped) — the caller accumulates and tonemaps.</remarks>
+    /// (non-tonemapped) -- the caller accumulates and tonemaps.</remarks>
     public float[] Render(Camera camera, RenderOptions options)
     {
         if (!_sceneLoaded)
@@ -126,7 +126,7 @@ public unsafe class GpuRenderer : IRenderer, IDisposable
         _progress?.Invoke("Reading back GPU results...");
         float[] rgbaFloat = _vk.ReadOutput();
 
-        // Convert RGBA → RGB (drop alpha), shader now outputs raw HDR
+        // Convert RGBA -> RGB (drop alpha), shader now outputs raw HDR
         float[] rgbFloat = new float[_width * _height * 3];
         for (int i = 0; i < _width * _height; i++)
         {

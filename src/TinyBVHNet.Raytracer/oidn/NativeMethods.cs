@@ -38,7 +38,7 @@ internal static class NativeMethods
         return IntPtr.Zero;
     }
 
-    // ── Types ────────────────────────────────────────────────
+    // -- Types ------------------------------------------------
     public const int OIDN_DEVICE_TYPE_DEFAULT = 0;
     public const int OIDN_DEVICE_TYPE_CPU = 1;
 
@@ -46,12 +46,12 @@ internal static class NativeMethods
 
     public const int OIDN_FORMAT_FLOAT3 = 3;
 
-    // ── Device ───────────────────────────────────────────────
+    // -- Device -----------------------------------------------
     [DllImport(DllName)] public static extern IntPtr oidnNewDevice(int deviceType);
     [DllImport(DllName)] public static extern void oidnCommitDevice(IntPtr device);
     [DllImport(DllName)] public static extern void oidnReleaseDevice(IntPtr device);
 
-    // ── Filter ───────────────────────────────────────────────
+    // -- Filter -----------------------------------------------
     [DllImport(DllName)] public static extern IntPtr oidnNewFilter(IntPtr device, string type);
     [DllImport(DllName)] public static extern void oidnReleaseFilter(IntPtr filter);
 

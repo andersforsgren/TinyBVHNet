@@ -3,7 +3,7 @@ using System.IO;
 namespace TinyBVHNet.Raytracer;
 
 /// <summary>
-/// Writes images in Netpbm PPM (P6 binary) format — no external dependencies needed.
+/// Writes images in Netpbm PPM (P6 binary) format -- no external dependencies needed.
 /// </summary>
 public static class PpmWriter
 {

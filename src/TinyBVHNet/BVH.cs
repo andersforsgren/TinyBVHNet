@@ -6,27 +6,14 @@ namespace TinyBVHNet;
 /// Managed wrapper around the TinyBVH native library.
 /// Provides a safe, object-oriented API for building and querying BVH structures.
 /// </summary>
-public class BVH : IDisposable
-{
-    private IntPtr _handle;
-    private bool _disposed;
-
-    /// <summary>Internal access to native handle for cross-type operations.</summary>
-    internal IntPtr Handle => _handle;
-
-    private void ThrowIfDisposed()
-    {
-        if (_disposed) throw new ObjectDisposedException(nameof(BVH));
-    }
-
+public class BVH : NativeObject, IBVH
+{   
     /// <summary>
     /// Creates a new BVH instance. Call <see cref="Build"/> to construct the hierarchy.
     /// </summary>
     public BVH()
+        : base(NativeMethods.TBVH_Create(), NativeMethods.TBVH_Destroy)
     {
-        _handle = NativeMethods.TBVH_Create();
-        if (_handle == IntPtr.Zero)
-            throw new InvalidOperationException("Failed to create native BVH instance.");
     }
 
     /// <summary>
@@ -36,10 +23,9 @@ public class BVH : IDisposable
     /// </summary>
     public void Build(float[] vertices, uint triCount)
     {
-        ThrowIfDisposed();
         if (vertices.Length < triCount * 3 * 4)
             throw new ArgumentException($"Vertices array too small. Expected at least {triCount * 3 * 4}, got {vertices.Length}.", nameof(vertices));
-        NativeMethods.TBVH_Build(_handle, vertices, triCount);
+        NativeMethods.TBVH_Build(Handle, vertices, triCount);
     }
 
     /// <summary>
@@ -47,10 +33,9 @@ public class BVH : IDisposable
     /// </summary>
     public void BuildHQ(float[] vertices, uint triCount)
     {
-        ThrowIfDisposed();
         if (vertices.Length < triCount * 3 * 4)
             throw new ArgumentException($"Vertices array too small.", nameof(vertices));
-        NativeMethods.TBVH_BuildHQ(_handle, vertices, triCount);
+        NativeMethods.TBVH_BuildHQ(Handle, vertices, triCount);
     }
 
     /// <summary>
@@ -59,8 +44,7 @@ public class BVH : IDisposable
     /// </summary>
     public void BuildIndexed(float[] vertices, uint[] indices, uint triCount)
     {
-        ThrowIfDisposed();
-        NativeMethods.TBVH_BuildIndexed(_handle, vertices, indices, triCount);
+        NativeMethods.TBVH_BuildIndexed(Handle, vertices, indices, triCount);
     }
 
     /// <summary>
@@ -68,8 +52,7 @@ public class BVH : IDisposable
     /// </summary>
     public void BuildAABB(float[] aabbs, uint primCount)
     {
-        ThrowIfDisposed();
-        NativeMethods.TBVH_BuildAABB(_handle, aabbs, primCount);
+        NativeMethods.TBVH_BuildAABB(Handle, aabbs, primCount);
     }
 
     /// <summary>
@@ -81,11 +64,9 @@ public class BVH : IDisposable
     /// <returns>An <see cref="IntersectionResult"/> if a hit was found, or null.</returns>
     public unsafe IntersectionResult? Intersect(Vector3 origin, Vector3 direction, float maxDistance = float.MaxValue)
     {
-        ThrowIfDisposed();
-
         float t = maxDistance;
 
-        int hit = NativeMethods.TBVH_Intersect(_handle, (float*)&origin, (float*)&direction, ref t, out float u, out float v, out uint primIdx);
+        int hit = NativeMethods.TBVH_Intersect(Handle, (float*)&origin, (float*)&direction, ref t, out float u, out float v, out uint primIdx);
 
         if (hit == 0)
             return null;
@@ -104,8 +85,7 @@ public class BVH : IDisposable
     /// </summary>
     public void Save(string filename)
     {
-        ThrowIfDisposed();
-        if (NativeMethods.TBVH_Save(_handle, filename) == 0)
+        if (NativeMethods.TBVH_Save(Handle, filename) == 0)
             throw new InvalidOperationException($"Failed to save BVH to '{filename}'.");
     }
 
@@ -114,8 +94,7 @@ public class BVH : IDisposable
     /// </summary>
     public void Load(string filename, float[] vertices, uint triCount)
     {
-        ThrowIfDisposed();
-        if (NativeMethods.TBVH_Load(_handle, filename, vertices, triCount) == 0)
+        if (NativeMethods.TBVH_Load(Handle, filename, vertices, triCount) == 0)
             throw new InvalidOperationException($"Failed to load BVH from '{filename}'.");
     }
 
@@ -124,8 +103,7 @@ public class BVH : IDisposable
     /// </summary>
     public void LoadIndexed(string filename, float[] vertices, uint[] indices, uint triCount)
     {
-        ThrowIfDisposed();
-        if (NativeMethods.TBVH_LoadIndexed(_handle, filename, vertices, indices, triCount) == 0)
+        if (NativeMethods.TBVH_LoadIndexed(Handle, filename, vertices, indices, triCount) == 0)
             throw new InvalidOperationException($"Failed to load BVH from '{filename}'.");
     }
 
@@ -135,8 +113,7 @@ public class BVH : IDisposable
     /// </summary>
     public void Refit(uint nodeIdx = 0)
     {
-        ThrowIfDisposed();
-        NativeMethods.TBVH_Refit(_handle, nodeIdx);
+        NativeMethods.TBVH_Refit(Handle, nodeIdx);
     }
 
     /// <summary>
@@ -146,8 +123,7 @@ public class BVH : IDisposable
     {
         get
         {
-            ThrowIfDisposed();
-            return NativeMethods.TBVH_NodeCount(_handle);
+            return NativeMethods.TBVH_NodeCount(Handle);
         }
     }
 
@@ -158,18 +134,16 @@ public class BVH : IDisposable
     {
         get
         {
-            ThrowIfDisposed();
-            return NativeMethods.TBVH_TriangleCount(_handle);
+            return NativeMethods.TBVH_TriangleCount(Handle);
         }
     }
 
     /// <summary>
-    /// Shadow ray query — returns true if the ray to maxDistance is occluded by any geometry.
+    /// Shadow ray query -- returns true if the ray to maxDistance is occluded by any geometry.
     /// </summary>
     public unsafe bool IsOccluded(Vector3 origin, Vector3 direction, float maxDistance = float.MaxValue)
     {
-        ThrowIfDisposed();
-        return NativeMethods.TBVH_IsOccluded(_handle, (float*)&origin, (float*)&direction, maxDistance) != 0;
+        return NativeMethods.TBVH_IsOccluded(Handle, (float*)&origin, (float*)&direction, maxDistance) != 0;
     }
 
     /// <summary>
@@ -177,8 +151,7 @@ public class BVH : IDisposable
     /// </summary>
     public float SAHCost(uint nodeIdx = 0)
     {
-        ThrowIfDisposed();
-        return NativeMethods.TBVH_SAHCost(_handle, nodeIdx);
+        return NativeMethods.TBVH_SAHCost(Handle, nodeIdx);
     }
 
     /// <summary>
@@ -188,8 +161,7 @@ public class BVH : IDisposable
     {
         get
         {
-            ThrowIfDisposed();
-            return NativeMethods.TBVH_LeafCount(_handle);
+            return NativeMethods.TBVH_LeafCount(Handle);
         }
     }
 
@@ -198,8 +170,7 @@ public class BVH : IDisposable
     /// </summary>
     public int GetPrimCount(uint nodeIdx = 0)
     {
-        ThrowIfDisposed();
-        return NativeMethods.TBVH_PrimCount(_handle, nodeIdx);
+        return NativeMethods.TBVH_PrimCount(Handle, nodeIdx);
     }
 
     /// <summary>
@@ -207,8 +178,7 @@ public class BVH : IDisposable
     /// </summary>
     public float EPOCost(uint nodeIdx = 0)
     {
-        ThrowIfDisposed();
-        return NativeMethods.TBVH_EPOCost(_handle, nodeIdx);
+        return NativeMethods.TBVH_EPOCost(Handle, nodeIdx);
     }
 
     /// <summary>
@@ -216,9 +186,8 @@ public class BVH : IDisposable
     /// </summary>
     public unsafe bool IntersectSphere(float centerX, float centerY, float centerZ, float radius)
     {
-        ThrowIfDisposed();
         var center = stackalloc float[3] { centerX, centerY, centerZ };
-        return NativeMethods.TBVH_IntersectSphere(_handle, center, radius) != 0;
+        return NativeMethods.TBVH_IntersectSphere(Handle, center, radius) != 0;
     }
 
     /// <summary>
@@ -229,17 +198,15 @@ public class BVH : IDisposable
     /// <param name="stochastic">Use stochastic optimization.</param>
     public void Optimize(uint iterations = 25, bool extreme = false, bool stochastic = false)
     {
-        ThrowIfDisposed();
-        NativeMethods.TBVH_Optimize(_handle, iterations, extreme ? 1 : 0, stochastic ? 1 : 0);
+        NativeMethods.TBVH_Optimize(Handle, iterations, extreme ? 1 : 0, stochastic ? 1 : 0);
     }
 
     /// <summary>
-    /// Compact the BVH — removes unused nodes, shrinks memory footprint.
+    /// Compact the BVH -- removes unused nodes, shrinks memory footprint.
     /// </summary>
     public void Compact()
     {
-        ThrowIfDisposed();
-        NativeMethods.TBVH_Compact(_handle);
+        NativeMethods.TBVH_Compact(Handle);
     }
 
     /// <summary>
@@ -247,8 +214,7 @@ public class BVH : IDisposable
     /// </summary>
     public void SplitLeafs(uint maxPrims)
     {
-        ThrowIfDisposed();
-        NativeMethods.TBVH_SplitLeafs(_handle, maxPrims);
+        NativeMethods.TBVH_SplitLeafs(Handle, maxPrims);
     }
 
     /// <summary>
@@ -256,20 +222,9 @@ public class BVH : IDisposable
     /// </summary>
     public void CombineLeafs(uint nodeIdx = 0)
     {
-        ThrowIfDisposed();
-        NativeMethods.TBVH_CombineLeafs(_handle, nodeIdx);
+        NativeMethods.TBVH_CombineLeafs(Handle, nodeIdx);
     }
-
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            NativeMethods.TBVH_Destroy(_handle);
-            _handle = IntPtr.Zero;
-            _disposed = true;
-        }
-        GC.SuppressFinalize(this);
-    }
+  
 }
 
 /// <summary>

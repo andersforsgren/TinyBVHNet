@@ -50,7 +50,7 @@ public class SaveLoadTests
         bvh.Save(TestFile);
 
         using var bvh2 = new BVH();
-        // Load with correct vertices — should work
+        // Load with correct vertices -- should work
         bvh2.Load(TestFile, TestGeometry.SingleTriangle(), triCount: 1);
 
         Assert.True(bvh2.NodeCount > 0);

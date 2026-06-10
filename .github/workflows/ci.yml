@@ -25,8 +25,7 @@ jobs:
             arch: x64
             rid: win-x64
             native_name: TinyBVHNetNative.dll
-            cmake_generator: "Visual Studio 17 2022"
-            cmake_arch: x64
+            cmake_generator: "MinGW Makefiles"
             test_frameworks: "net48;net8.0"
             run_tests: true
           - name: Windows arm64
@@ -34,8 +33,7 @@ jobs:
             arch: ARM64
             rid: win-arm64
             native_name: TinyBVHNetNative-arm64.dll
-            cmake_generator: "Visual Studio 17 2022"
-            cmake_arch: ARM64
+            cmake_generator: "MinGW Makefiles"
             test_frameworks: ""
             run_tests: false  # can't run arm64 native on x64 runner
           - name: Linux x64
@@ -44,7 +42,6 @@ jobs:
             rid: linux-x64
             native_name: libTinyBVHNetNative.so
             cmake_generator: "Unix Makefiles"
-            cmake_arch: ""
             test_frameworks: "net8.0"
             run_tests: true
           - name: Linux arm64
@@ -53,7 +50,6 @@ jobs:
             rid: linux-arm64
             native_name: libTinyBVHNetNative-arm64.so
             cmake_generator: "Unix Makefiles"
-            cmake_arch: ""
             test_frameworks: ""
             run_tests: false  # can't run arm64 native on x64 runner
 
@@ -81,13 +77,30 @@ jobs:
         run: if (Test-Path native/build) { Remove-Item -Recurse -Force native/build }
         shell: pwsh
 
-      - name: Configure CMake (Windows)
+      - name: Setup MinGW PATH (Windows)
         if: runner.os == 'Windows'
+        run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Configure CMake (Windows x64)
+        if: runner.os == 'Windows' && matrix.arch != 'ARM64'
         run: |
           cmake -B ${{ github.workspace }}/native/build `
             -G "${{ matrix.cmake_generator }}" `
-            -A ${{ matrix.cmake_arch }} `
             -DCMAKE_BUILD_TYPE=Release `
+            -S ${{ github.workspace }}/native
+
+      - name: Install MinGW ARM64 cross-compiler (Windows)
+        if: runner.os == 'Windows' && matrix.arch == 'ARM64'
+        run: C:\msys64\usr\bin\pacman.exe -S --noconfirm mingw-w64-cross-aarch64-gcc
+
+      - name: Configure CMake (Windows arm64)
+        if: runner.os == 'Windows' && matrix.arch == 'ARM64'
+        run: |
+          cmake -B ${{ github.workspace }}/native/build `
+            -G "${{ matrix.cmake_generator }}" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_CXX_COMPILER=aarch64-w64-mingw32-g++ `
+            -DCMAKE_C_COMPILER=aarch64-w64-mingw32-gcc `
             -S ${{ github.workspace }}/native
 
       - name: Install ARM64 cross-compiler (Linux)

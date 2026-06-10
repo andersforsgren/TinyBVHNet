@@ -3,26 +3,15 @@ using Xunit;
 namespace TinyBVHNet.Tests;
 
 /// <summary>
-/// Tests for BVH construction and basic properties.
+/// Tests for BVH construction (input validation, wrapper properties).
 /// </summary>
 public class BVHTests
 {
     [Fact]
-    public void Create_ReturnsValidHandle()
-    {
-        using var bvh = new BVH();
-        Assert.True(bvh.NodeCount >= 0);
-    }
-
-    [Fact]
     public void Build_SingleTriangle_ProducesNodes()
     {
         using var bvh = new BVH();
-        var vertices = TestGeometry.SingleTriangle();
-
-        bvh.Build(vertices, triCount: 1);
-
-        // A single triangle BVH should have at least 1 node (typically 1 leaf)
+        bvh.Build(TestGeometry.SingleTriangle(), triCount: 1);
         Assert.True(bvh.NodeCount >= 1);
     }
 
@@ -30,11 +19,7 @@ public class BVHTests
     public void Build_UnitCube_ProducesNodes()
     {
         using var bvh = new BVH();
-        var vertices = TestGeometry.UnitCube();
-
-        bvh.Build(vertices, triCount: 12);
-
-        // A 12-triangle BVH should have multiple nodes
+        bvh.Build(TestGeometry.UnitCube(), triCount: 12);
         Assert.True(bvh.NodeCount > 1);
     }
 
@@ -42,8 +27,7 @@ public class BVHTests
     public void Build_ThrowsOnTooSmallArray()
     {
         using var bvh = new BVH();
-        var tooSmall = new float[3]; // Need at least 12 floats for 1 triangle
-
+        var tooSmall = new float[3];
         Assert.Throws<ArgumentException>(() => bvh.Build(tooSmall, triCount: 1));
     }
 
@@ -51,10 +35,7 @@ public class BVHTests
     public void Build_AcceptsOversizedArray()
     {
         using var bvh = new BVH();
-        var vertices = TestGeometry.SingleTriangle();
-        // Array has 12 floats, but we only tell it to use 1 triangle (12 floats)
-        // This should work without throwing
-        bvh.Build(vertices, triCount: 1);
+        bvh.Build(TestGeometry.SingleTriangle(), triCount: 1);
         Assert.True(bvh.NodeCount >= 1);
     }
 }

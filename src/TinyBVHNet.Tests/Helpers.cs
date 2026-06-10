@@ -7,7 +7,7 @@ internal static class TestGeometry
 {
     /// <summary>
     /// A single triangle covering most of the XY plane at Z=0.
-    /// Vertices: (0,0,0), (10,0,0), (0,10,0) — each as float4 (x,y,z,w).
+    /// Vertices: (0,0,0), (10,0,0), (0,10,0) -- each as float4 (x,y,z,w).
     /// </summary>
     public static float[] SingleTriangle()
     {

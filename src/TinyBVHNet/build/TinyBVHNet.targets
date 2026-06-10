@@ -12,7 +12,7 @@
     <_TinyBVHNetIsOSX     Condition="$([MSBuild]::IsOSPlatform('OSX'))">true</_TinyBVHNetIsOSX>
   </PropertyGroup>
 
-  <!-- Resolve runtime identifier: explicit RID → OS detection → default -->
+  <!-- Resolve runtime identifier: explicit RID -> OS detection -> default -->
   <PropertyGroup>
     <_TinyBVHNetRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</_TinyBVHNetRid>
     <_TinyBVHNetRid Condition="'$(_TinyBVHNetRid)' == '' and '$(_TinyBVHNetIsWindows)' == 'true' and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">win-arm64</_TinyBVHNetRid>
@@ -30,7 +30,7 @@
     <_TinyBVHNetNativeName Condition="'$(_TinyBVHNetIsOSX)'     == 'true'">libTinyBVHNetNative.dylib</_TinyBVHNetNativeName>
   </PropertyGroup>
 
-  <!-- net48: Always Windows → copy win-x64 DLL -->
+  <!-- net48: Always Windows -> copy win-x64 DLL -->
   <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
     <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\win-x64\native\TinyBVHNetNative.dll"
              CopyToOutputDirectory="PreserveNewest"

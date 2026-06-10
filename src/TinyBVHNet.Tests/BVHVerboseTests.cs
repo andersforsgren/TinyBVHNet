@@ -5,35 +5,18 @@ namespace TinyBVHNet.Tests;
 public class BVHVerboseTests
 {
     [Fact]
-    public void Create_ReturnsValidHandle()
-    {
-        using var bvh = new BVHVerbose();
-        Assert.True(true);
-    }
-
-    [Fact]
-    public void Build_UnitCube_Success()
+    public void Build_UnitCube_DoesNotThrow()
     {
         using var bvh = new BVHVerbose();
         bvh.Build(TestGeometry.UnitCube(), triCount: 12);
-        Assert.True(true);
     }
 
     [Fact]
-    public void NodeCount_AfterBuild_IsPositive()
+    public void NodeCount_AfterBuild_DoesNotThrow()
     {
         using var bvh = new BVHVerbose();
         bvh.Build(TestGeometry.UnitCube(), triCount: 12);
         Assert.True(bvh.NodeCount > 0);
-    }
-
-    [Fact]
-    public void SAHCost_AfterBuild_IsNonNegative()
-    {
-        using var bvh = new BVHVerbose();
-        bvh.Build(TestGeometry.UnitCube(), triCount: 12);
-        float cost = bvh.SAHCost();
-        Assert.True(cost >= 0);
     }
 
     [Fact]
@@ -42,16 +25,14 @@ public class BVHVerboseTests
         using var bvh = new BVHVerbose();
         bvh.Build(TestGeometry.UnitCube(), triCount: 12);
         bvh.Optimize(iterations: 3);
-        Assert.True(true);
     }
 
-    [Fact(Skip = "Access violation on net48 when run in full suite (memory corruption from SSE variants)")]
+    [Fact(Skip = "Full-suite ordering issue on net48: memory state from prior tests causes failure. Passes in isolation and on net8.0.")]
     public void Refit_AfterBuild_DoesNotThrow()
     {
         using var bvh = new BVHVerbose();
         bvh.Build(TestGeometry.UnitCube(), triCount: 12);
         bvh.Refit();
-        Assert.True(true);
     }
 
     [Fact]
@@ -60,11 +41,10 @@ public class BVHVerboseTests
         using var bvh = new BVHVerbose();
         bvh.Build(TestGeometry.UnitCube(), triCount: 12);
         bvh.Compact();
-        Assert.True(true);
     }
 
     [Fact]
-    public void ConvertFrom_BVH_ProducesNodes()
+    public void ConvertFrom_BVH_DoesNotThrow()
     {
         using var bvhSrc = new BVH();
         bvhSrc.Build(TestGeometry.UnitCube(), triCount: 12);

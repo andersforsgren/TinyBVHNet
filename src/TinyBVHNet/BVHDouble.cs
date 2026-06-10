@@ -7,21 +7,11 @@ namespace TinyBVHNet;
 /// Uses 64-bit floating point throughout for scenes requiring
 /// extremely high precision. Not intended for real-time use.
 /// </summary>
-public class BVHDouble : IDisposable
+public class BVHDouble : NativeObject, IBVHDouble
 {
-    private IntPtr _handle;
-    private bool _disposed;
-
-    private void ThrowIfDisposed()
-    {
-        if (_disposed) throw new ObjectDisposedException(nameof(BVHDouble));
-    }
-
     public BVHDouble()
+        : base(NativeMethods.TBVH_Double_Create(), NativeMethods.TBVH_Double_Destroy)
     {
-        _handle = NativeMethods.TBVH_Double_Create();
-        if (_handle == IntPtr.Zero)
-            throw new InvalidOperationException("Failed to create native BVH_Double instance.");
     }
 
     /// <summary>
@@ -31,10 +21,9 @@ public class BVHDouble : IDisposable
     /// </summary>
     public void Build(double[] vertices, ulong primCount)
     {
-        ThrowIfDisposed();
         if ((ulong)vertices.Length < primCount * 9)
             throw new ArgumentException($"Vertices array too small. Expected at least {primCount * 9}, got {vertices.Length}.", nameof(vertices));
-        NativeMethods.TBVH_Double_Build(_handle, vertices, primCount);
+        NativeMethods.TBVH_Double_Build(Handle, vertices, primCount);
     }
 
     /// <summary>
@@ -42,12 +31,22 @@ public class BVHDouble : IDisposable
     /// </summary>
     public unsafe DoubleIntersectionResult? Intersect(Vector3 origin, Vector3 direction, double maxDistance = double.MaxValue)
     {
-        ThrowIfDisposed();
-        double* originPtr = stackalloc double[3] { origin.X, origin.Y, origin.Z };
-        double* dirPtr = stackalloc double[3] { direction.X, direction.Y, direction.Z };
+        return Intersect(origin.X, origin.Y, origin.Z,
+                         direction.X, direction.Y, direction.Z, maxDistance);
+    }
+
+    /// <summary>
+    /// Intersect a double-precision ray with explicit double coordinates.
+    /// </summary>
+    public unsafe DoubleIntersectionResult? Intersect(double originX, double originY, double originZ,
+                                                       double dirX, double dirY, double dirZ,
+                                                       double maxDistance = double.MaxValue)
+    {
+        double* originPtr = stackalloc double[3] { originX, originY, originZ };
+        double* dirPtr = stackalloc double[3] { dirX, dirY, dirZ };
         double t = maxDistance;
 
-        int hit = NativeMethods.TBVH_Double_Intersect(_handle, originPtr, dirPtr,
+        int hit = NativeMethods.TBVH_Double_Intersect(Handle, originPtr, dirPtr,
             ref t, out double u, out double v, out ulong primIdx);
 
         if (hit == 0) return null;
@@ -55,14 +54,24 @@ public class BVHDouble : IDisposable
     }
 
     /// <summary>
-    /// Shadow ray query — returns true if the ray to maxDistance is occluded.
+    /// Shadow ray query -- returns true if the ray to maxDistance is occluded.
     /// </summary>
     public unsafe bool IsOccluded(Vector3 origin, Vector3 direction, double maxDistance = double.MaxValue)
     {
-        ThrowIfDisposed();
-        double* originPtr = stackalloc double[3] { origin.X, origin.Y, origin.Z };
-        double* dirPtr = stackalloc double[3] { direction.X, direction.Y, direction.Z };
-        return NativeMethods.TBVH_Double_IsOccluded(_handle, originPtr, dirPtr, maxDistance) != 0;
+        return IsOccluded(origin.X, origin.Y, origin.Z,
+                          direction.X, direction.Y, direction.Z, maxDistance);
+    }
+
+    /// <summary>
+    /// Shadow ray query with explicit double-precision coordinates.
+    /// </summary>
+    public unsafe bool IsOccluded(double originX, double originY, double originZ,
+                                   double dirX, double dirY, double dirZ,
+                                   double maxDistance = double.MaxValue)
+    {
+        double* originPtr = stackalloc double[3] { originX, originY, originZ };
+        double* dirPtr = stackalloc double[3] { dirX, dirY, dirZ };
+        return NativeMethods.TBVH_Double_IsOccluded(Handle, originPtr, dirPtr, maxDistance) != 0;
     }
 
     /// <summary>
@@ -70,19 +79,7 @@ public class BVHDouble : IDisposable
     /// </summary>
     public double SAHCost(ulong nodeIdx = 0)
     {
-        ThrowIfDisposed();
-        return NativeMethods.TBVH_Double_SAHCost(_handle, nodeIdx);
-    }
-
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            NativeMethods.TBVH_Double_Destroy(_handle);
-            _handle = IntPtr.Zero;
-            _disposed = true;
-        }
-        GC.SuppressFinalize(this);
+        return NativeMethods.TBVH_Double_SAHCost(Handle, nodeIdx);
     }
 }
 
