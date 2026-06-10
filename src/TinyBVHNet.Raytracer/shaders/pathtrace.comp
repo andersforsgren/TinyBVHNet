@@ -338,7 +338,7 @@ void sampleCosineHemisphere(float nx, float ny, float nz, out float wx, out floa
     // Build local frame
     vec3 u, v;
     vec3 n = vec3(nx, ny, nz);
-    if (abs(n.x) > 0.9f)
+    if (abs(n.z) > 0.9f)
         u = normalize3(cross3(0.0f, 1.0f, 0.0f, n.x, n.y, n.z));
     else
         u = normalize3(cross3(0.0f, 0.0f, 1.0f, n.x, n.y, n.z));

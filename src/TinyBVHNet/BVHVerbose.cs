@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 
 namespace TinyBVHNet;
@@ -21,6 +22,8 @@ public class BVHVerbose : NativeObject
     /// <summary>Build from scratch using vertex data.</summary>
     public void Build(float[] vertices, uint triCount)
     {
+        if (vertices.Length < triCount * 3 * 4)
+            throw new ArgumentException($"Vertices array too small. Expected at least {triCount * 3 * 4}, got {vertices.Length}.", nameof(vertices));
         NativeMethods.TBVH_Verbose_Build(Handle, vertices, triCount);
     }
 

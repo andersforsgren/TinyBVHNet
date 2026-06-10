@@ -12,7 +12,7 @@ public class BVHJobSystemTests
     public void Create_ReturnsValidHandle()
     {
         using var jobs = new BVHJobSystem();
-        Assert.True(true);
+        Assert.NotEqual(IntPtr.Zero, jobs.Handle);
     }
 
     [Fact]
@@ -47,6 +47,6 @@ public class BVHJobSystemTests
         var jobs = new BVHJobSystem();
         jobs.Dispose();
         using var jobs2 = new BVHJobSystem();
-        Assert.True(true);
+        Assert.NotEqual(IntPtr.Zero, jobs2.Handle);
     }
 }

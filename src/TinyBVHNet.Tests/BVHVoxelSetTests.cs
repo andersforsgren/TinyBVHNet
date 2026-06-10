@@ -10,7 +10,7 @@ public class BVHVoxelSetTests
     public void Create_ReturnsValidHandle()
     {
         using var voxels = new BVHVoxelSet();
-        Assert.True(true);
+        Assert.NotEqual(IntPtr.Zero, voxels.Handle);
     }
 
     [Fact]
@@ -19,6 +19,5 @@ public class BVHVoxelSetTests
         using var voxels = new BVHVoxelSet();
         voxels.Set(10, 20, 30, v: 1);
         voxels.UpdateTopGrid();
-        Assert.True(true);
     }
 }

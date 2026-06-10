@@ -10,7 +10,6 @@ project(TinyBVHNetNative LANGUAGES CXX)
 set(TinyBVH_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../external/tinybvh")
 
 # Build as a shared library (DLL on Windows, .so on Linux, .dylib on macOS)
-# Name must differ from the managed assembly (TinyBVHNet.dll) to avoid collision.
 add_library(TinyBVHNetNative SHARED
     TinyBVH_c.cpp
 )
@@ -27,17 +26,16 @@ if(MSVC)
     )
     # Use static runtime (/MT) to avoid dependency on MSVCP140.dll / VCRUNTIME140.dll
     set_property(TARGET TinyBVHNetNative PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    # SIMD flags: AVX2 on x64, no arch flag on ARM64 (NEON used via arm_neon.h)
-    # Check both host processor and generator platform (for cross-compilation)
+    # SIMD flags: AVX2 on x64
     if(CMAKE_GENERATOR_PLATFORM MATCHES "ARM64|arm64" OR CMAKE_VS_PLATFORM_NAME MATCHES "ARM64|arm64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64")
         target_compile_options(TinyBVHNetNative PRIVATE /O2)
     else()
         target_compile_options(TinyBVHNetNative PRIVATE /O2 /arch:AVX2)
     endif()
 elseif(MINGW)
-    # MinGW-w64 on Windows (cross-compiler or native)
-    # -fno-strict-aliasing is needed because tinybvh uses type punning via
-    # pointer casts (e.g. *(float*)&uint32_var) which violates strict aliasing.
+    # MinGW-w64 on Windows
+    # -mavx2 enables AVX2 and implies -mavx; -mfma enables FMA instructions
+    # -fno-strict-aliasing: tinybvh uses type punning via pointer casts
     target_compile_options(TinyBVHNetNative PRIVATE -O3 -mavx2 -mfma -fno-strict-aliasing)
     # Static link to avoid runtime dependencies on libstdc++/libgcc DLLs
     target_link_options(TinyBVHNetNative PRIVATE -static-libgcc -static-libstdc++ -static)

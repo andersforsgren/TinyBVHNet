@@ -8,7 +8,7 @@ namespace TinyBVHNet;
 /// <c>double</c> throughout for scenes requiring extreme precision (e.g.
 /// planet-scale geometry). Not intended for real-time use.
 /// </summary>
-public interface IBVHDouble : IDisposable
+public interface IBVHDouble : INativeObject, IDisposable
 {
     /// <summary>
     /// Build the acceleration structure from triangle vertices in double precision.

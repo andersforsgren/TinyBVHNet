@@ -22,6 +22,8 @@ namespace TinyBVHNet
         /// <param name="triCount">Number of triangles.</param>
         public void Build(float[] vertices, uint triCount)
         {
+            if (vertices.Length < triCount * 3 * 4)
+                throw new ArgumentException($"Vertices array too small. Expected at least {triCount * 3 * 4}, got {vertices.Length}.", nameof(vertices));
             NativeMethods.TBVH_GPU4_Build(Handle, vertices, triCount);
         }
 
@@ -30,6 +32,8 @@ namespace TinyBVHNet
         /// </summary>
         public void BuildHQ(float[] vertices, uint triCount)
         {
+            if (vertices.Length < triCount * 3 * 4)
+                throw new ArgumentException($"Vertices array too small. Expected at least {triCount * 3 * 4}, got {vertices.Length}.", nameof(vertices));
             NativeMethods.TBVH_GPU4_BuildHQ(Handle, vertices, triCount);
         }
 
@@ -50,17 +54,7 @@ namespace TinyBVHNet
         /// <returns>IntersectionResult on hit, null on miss.</returns>
         public unsafe IntersectionResult? Intersect(Vector3 origin, Vector3 direction, float maxDistance = 1e30f)
         {
-            float t = maxDistance;
-            int result = NativeMethods.TBVH_GPU4_Intersect(Handle, (float*)&origin, (float*)&direction, ref t, out float u, out float v, out uint primIdx);
-            if (result == 0)
-                return null;
-            return new IntersectionResult
-            {
-                Distance = t,
-                U = u,
-                V = v,
-                PrimitiveIndex = primIdx
-            };
+            return IntersectHelper.Intersect(Handle, origin, direction, maxDistance, NativeMethods.TBVH_GPU4_Intersect);
         }
 
         /// <summary>
@@ -119,7 +113,7 @@ namespace TinyBVHNet
         /// </summary>
         public unsafe bool IsOccluded(Vector3 origin, Vector3 direction, float maxDistance = 1e30f)
         {
-            return NativeMethods.TBVH_GPU4_IsOccluded(Handle, (float*)&origin, (float*)&direction, maxDistance) != 0;
+            return IntersectHelper.IsOccluded(Handle, origin, direction, maxDistance, NativeMethods.TBVH_GPU4_IsOccluded);
         }
 
         /// <summary>

@@ -74,7 +74,9 @@ public sealed class CpuRenderer : IRenderer, IDisposable
         Parallel.For(0, w * h, idx =>
         {
             int x = idx % w, y = idx / w;
-            var localRng = new Random(Seed + idx * 3 + frameSeed * 71993);
+            // Hash-based seed to decorrelate adjacent pixels (avoid RNG spatial bias)
+            int pixelSeed = (int)(Seed ^ (idx * 2654435761u) ^ ((uint)frameSeed * 1103515245u));
+            var localRng = new Random(pixelSeed);
 
             float jx = (float)localRng.NextDouble();
             float jy = (float)localRng.NextDouble();
@@ -173,19 +175,16 @@ public sealed class CpuRenderer : IRenderer, IDisposable
         float r1 = (float)rng.NextDouble();
         float r2 = (float)rng.NextDouble();
         float phi = 2f * MathF.PI * r1;
+
         float r = MathF.Sqrt(r2);
 
-        Vector3 u, v;
-        if (Math.Abs(normal.X) > 0.9f)
-        {
+        // Choose a tangent vector that is NOT parallel to the normal.
+        Vector3 u;
+        if (Math.Abs(normal.Z) > 0.9f)
             u = Vector3.Normalize(Vector3.Cross(Vector3.UnitY, normal));
-            v = Vector3.Cross(normal, u);
-        }
         else
-        {
             u = Vector3.Normalize(Vector3.Cross(Vector3.UnitZ, normal));
-            v = Vector3.Cross(normal, u);
-        }
+        Vector3 v = Vector3.Cross(normal, u);
 
         float x = r * MathF.Cos(phi);
         float y = MathF.Sqrt(1f - r2);

@@ -13,14 +13,14 @@ public class BVHBlasInstanceTests
     public void Create_DefaultIdx_ReturnsValidHandle()
     {
         using var blasInst = new BVHBlasInstance();
-        Assert.True(true);
+        Assert.NotEqual(IntPtr.Zero, blasInst.Handle);
     }
 
     [Fact]
     public void Create_ExplicitIdx_ReturnsValidHandle()
     {
         using var blasInst = new BVHBlasInstance(idx: 7);
-        Assert.True(true);
+        Assert.NotEqual(IntPtr.Zero, blasInst.Handle);
     }
 
     [Fact]
@@ -30,7 +30,6 @@ public class BVHBlasInstanceTests
         bvh.Build(TestGeometry.SingleTriangle(), triCount: 1);
         using var blasInst = new BVHBlasInstance();
         blasInst.Update(bvh);
-        Assert.True(true);
     }
 
     [Fact]
@@ -65,7 +64,6 @@ public class BVHBlasInstanceTests
             0, 0, 0, 1
         };
         blasInst.SetTransform(identity);
-        Assert.True(true);
     }
 
     [Fact]
@@ -92,7 +90,6 @@ public class BVHBlasInstanceTests
         float[] identity = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
         blasInst.SetTransform(identity);
         blasInst.InvertTransform();
-        Assert.True(true);
     }
 
     [Fact]
@@ -117,6 +114,6 @@ public class BVHBlasInstanceTests
         var blasInst = new BVHBlasInstance();
         blasInst.Dispose();
         using var blasInst2 = new BVHBlasInstance(idx: 3);
-        Assert.True(true);
+        Assert.NotEqual(IntPtr.Zero, blasInst2.Handle);
     }
 }

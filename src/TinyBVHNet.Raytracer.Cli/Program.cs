@@ -183,6 +183,20 @@ public static class Program
         double mrays = totalRays / (totalSw.Elapsed.TotalSeconds * 1e6);
         Console.WriteLine($"  CPU total: {totalSw.Elapsed.TotalSeconds:F1}s | {mrays:F2} MRay/s");
 
+        // Save raw HDR floats for analysis (before tonemapping)
+        {
+            float invSpp = 1f / spp;
+            string rawPath = Path.ChangeExtension(outPath, ".raw");
+            byte[] rawBytes = new byte[accum.Length * 4];
+            for (int i = 0; i < accum.Length; i++)
+            {
+                float v = accum[i] * invSpp;
+                BitConverter.TryWriteBytes(rawBytes.AsSpan(i * 4), v);
+            }
+            File.WriteAllBytes(rawPath, rawBytes);
+            Console.WriteLine($"  Raw HDR saved: {rawPath}");
+        }
+
         // Tonemap and convert to bytes
         Console.WriteLine("Tonemapping and writing output...");
         RaytracerUtil.TonemapReinhard(accum, 1f / spp, exposure);

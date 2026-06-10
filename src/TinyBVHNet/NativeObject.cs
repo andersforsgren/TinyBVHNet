@@ -40,7 +40,7 @@ public class NativeObject : IEquatable<NativeObject>, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public virtual void Dispose(bool disposing)
+    public void Dispose(bool disposing)
     {
         if (_isDisposed)
             return;

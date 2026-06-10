@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 
 namespace TinyBVHNet;
@@ -15,26 +16,26 @@ public class BVH8CWBVH : NativeObject, IBVH
 
     public void Build(float[] vertices, uint triCount)
     {
+        if (vertices.Length < triCount * 3 * 4)
+            throw new ArgumentException($"Vertices array too small. Expected at least {triCount * 3 * 4}, got {vertices.Length}.", nameof(vertices));
         NativeMethods.TBVH_8CWBVH_Build(Handle, vertices, triCount);
     }
 
     public void BuildHQ(float[] vertices, uint triCount)
     {
+        if (vertices.Length < triCount * 3 * 4)
+            throw new ArgumentException($"Vertices array too small. Expected at least {triCount * 3 * 4}, got {vertices.Length}.", nameof(vertices));
         NativeMethods.TBVH_8CWBVH_BuildHQ(Handle, vertices, triCount);
     }
 
     public unsafe IntersectionResult? Intersect(Vector3 origin, Vector3 direction, float maxDistance = float.MaxValue)
     {
-        float t = maxDistance;
-
-        int hit = NativeMethods.TBVH_8CWBVH_Intersect(Handle, (float*)&origin, (float*)&direction, ref t, out float u, out float v, out uint primIdx);
-        if (hit == 0) return null;
-        return new IntersectionResult { Distance = t, U = u, V = v, PrimitiveIndex = primIdx };
+        return IntersectHelper.Intersect(Handle, origin, direction, maxDistance, NativeMethods.TBVH_8CWBVH_Intersect);
     }
 
     public unsafe bool IsOccluded(Vector3 origin, Vector3 direction, float maxDistance = float.MaxValue)
     {
-        return NativeMethods.TBVH_8CWBVH_IsOccluded(Handle, (float*)&origin, (float*)&direction, maxDistance) != 0;
+        return IntersectHelper.IsOccluded(Handle, origin, direction, maxDistance, NativeMethods.TBVH_8CWBVH_IsOccluded);
     }
 
     public float SAHCost(uint nodeIdx = 0)

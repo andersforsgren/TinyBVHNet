@@ -16,7 +16,7 @@ public class BVHBlasInstance : NativeObject
     }
 
     /// <summary>Update the BLAS this instance points to.</summary>
-    public void Update(BVH blas)
+    public void Update(NativeObject blas)
     {
         NativeMethods.TBVH_BLASInstance_Update(Handle, blas.Handle);
     }

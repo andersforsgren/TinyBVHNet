@@ -346,13 +346,14 @@ public sealed class MainForm : Form
             g.DrawImage(_displayBitmap, ClientRectangle);
 
         // Overlay
-        string rendererName = IsCpu ? "CPU (G: Toggle GPU)" : "GPU (G: Toggle CPU)";
-        string oidnTag = _denoiseEnabled ? " | Denoise ON (D: Enable)" : " | Denoise OFF (D: Disable)";
+        string rendererName = IsCpu ? "CPU (G)" : "GPU (G)";
+        string bouncesTag = $"MaxBounces: {_maxBounces} (F3/F4)";
+        string oidnTag = _denoiseEnabled ? "Denoise ON (D)" : "Denoise OFF (D)";
         string convText = _sampleCount > 1
             ? $" | Delta {_convergenceDelta * 100:F2}%"
             : "";
         DrawOverlay(g,
-            $"{rendererName}{oidnTag} | {_sampleCount} spp | {_mraysPerSec:F2} MRay/s | {_lastFrameMs:F1} ms/frame{convText}",
+            $"{rendererName} | {bouncesTag} | {oidnTag} | {_sampleCount} spp | {_mraysPerSec:F2} MRay/s | {_lastFrameMs:F1} ms/frame{convText}",
             _sampleCount, _mraysPerSec, _lastFrameMs);
     }
 

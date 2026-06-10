@@ -24,5 +24,10 @@
 		<None Include="..\TinyBVHNet.Raytracer\oidn\win-x64\*.dll" CopyToOutputDirectory="PreserveNewest" Link="oidn\win-x64\%(Filename)%(Extension)" />
 	</ItemGroup>
 
+	<!-- Copy compiled SPIR-V shaders from Raytracer project -->
+	<ItemGroup>
+		<None Include="..\TinyBVHNet.Raytracer\shaders\*.spv" CopyToOutputDirectory="PreserveNewest" Link="shaders\%(Filename)%(Extension)" />
+	</ItemGroup>
+
 
 </Project>
