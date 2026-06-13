@@ -26,7 +26,7 @@ jobs:
             rid: win-x64
             native_name: TinyBVHNetNative.dll
             cmake_generator: "MinGW Makefiles"
-            test_frameworks: "net48;net8.0"
+            test_frameworks: "net48;net10.0"
             run_tests: true
           - name: Windows arm64
             os: windows-latest
@@ -42,7 +42,7 @@ jobs:
             rid: linux-x64
             native_name: libTinyBVHNetNative.so
             cmake_generator: "Unix Makefiles"
-            test_frameworks: "net8.0"
+            test_frameworks: "net10.0"
             run_tests: true
           - name: Linux arm64
             os: ubuntu-latest
@@ -70,7 +70,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       # ── Build native library ──────────────────────────────────────────
       - name: Clean stale CMake cache (if any)
@@ -175,12 +175,12 @@ jobs:
       - name: Run tests (Windows x64, all TFMs)
         if: matrix.run_tests && runner.os == 'Windows'
         run: |
-          dotnet test src/TinyBVHNet.Tests/TinyBVHNet.Tests.csproj -c Release -f net8.0 --no-build
+          dotnet test src/TinyBVHNet.Tests/TinyBVHNet.Tests.csproj -c Release -f net10.0 --no-build
           dotnet test src/TinyBVHNet.Tests/TinyBVHNet.Tests.csproj -c Release -f net48 --no-build
 
       - name: Run tests (Linux)
         if: matrix.run_tests && runner.os == 'Linux'
-        run: dotnet test src/TinyBVHNet.Tests/TinyBVHNet.Tests.csproj -c Release -f net8.0 --no-build
+        run: dotnet test src/TinyBVHNet.Tests/TinyBVHNet.Tests.csproj -c Release -f net10.0 --no-build
 
   # ── Package: gather all native artifacts and build NuGet ───────────────
   package:
@@ -198,7 +198,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Download all native artifacts
         uses: actions/download-artifact@v4

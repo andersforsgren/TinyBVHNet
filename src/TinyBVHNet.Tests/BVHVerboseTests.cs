@@ -27,7 +27,7 @@ public class BVHVerboseTests
         bvh.Optimize(iterations: 3);
     }
 
-    [Fact(Skip = "Full-suite ordering issue on net48: memory state from prior tests causes failure. Passes in isolation and on net8.0.")]
+    [Fact(Skip = "Full-suite ordering issue on net48: memory state from prior tests causes failure. Passes in isolation and on net10.0.")]
     public void Refit_AfterBuild_DoesNotThrow()
     {
         using var bvh = new BVHVerbose();

@@ -26,7 +26,7 @@ internal static class NativeMethods
         if (libraryName != DllName)
             return IntPtr.Zero;
 
-        // Assembly location, e.g.:  ...\bin\Debug\net8.0\TinyBVHNet.Raytracer.dll
+        // Assembly location, e.g.:  ...\bin\Debug\net10.0\TinyBVHNet.Raytracer.dll
         string? asmDir = Path.GetDirectoryName(assembly.Location);
         if (asmDir == null)
             return IntPtr.Zero;

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net48;net8.0</TargetFrameworks>
+		<TargetFrameworks>net48;net10.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<LangVersion>12</LangVersion>
@@ -46,5 +46,11 @@
 	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
 		<PlatformTarget>x64</PlatformTarget>
 	</PropertyGroup>
+
+	<!-- Force a version of System.Runtime.CompilerServices.Unsafe that satisfies both
+	     System.Memory (>= 4.0.4.1) and xUnit (>= 6.0.0) on .NET Framework. -->
+	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+	</ItemGroup>
 
 </Project>

@@ -2,7 +2,7 @@
 
 .NET wrapper for the [TinyBVH](https://github.com/jbikker/tinybvh) library — a fast, lightweight BVH (Bounding Volume Hierarchy) construction and traversal library by [Jacco Bikker](https://github.com/jbikker).
 
-Multi-targets `net48` and `net8.0`. Ships native binaries for **Windows x64/arm64** and **Linux x64/arm64**.
+Multi-targets `net48` and `net10.0`. Ships native binaries for **Windows x64/arm64** and **Linux x64/arm64**.
 
 ```csharp
 using TinyBVHNet;

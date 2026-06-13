@@ -18,7 +18,7 @@ internal static class NativeMethods
     public static extern void TBVH_Destroy(IntPtr bvh);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_Build(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_Build(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe int TBVH_Intersect(IntPtr bvh,
@@ -29,9 +29,9 @@ internal static class NativeMethods
     public static extern int TBVH_Save(IntPtr bvh, [MarshalAs(UnmanagedType.LPStr)] string filename);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int TBVH_Load(IntPtr bvh,
+    public static extern unsafe int TBVH_Load(IntPtr bvh,
         [MarshalAs(UnmanagedType.LPStr)] string filename,
-        float[] vertices, uint triCount);
+        float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void TBVH_Refit(IntPtr bvh, uint nodeIdx);
@@ -52,19 +52,19 @@ internal static class NativeMethods
     // -- BVH extended build methods ----------------------------------
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_BuildHQ(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_BuildHQ(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_BuildIndexed(IntPtr bvh,
-        float[] vertices, uint[] indices, uint triCount);
+    public static extern unsafe void TBVH_BuildIndexed(IntPtr bvh,
+        float* vertices, uint* indices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_BuildAABB(IntPtr bvh, float[] aabbs, uint primCount);
+    public static extern unsafe void TBVH_BuildAABB(IntPtr bvh, float* aabbs, uint primCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int TBVH_LoadIndexed(IntPtr bvh,
+    public static extern unsafe int TBVH_LoadIndexed(IntPtr bvh,
         [MarshalAs(UnmanagedType.LPStr)] string filename,
-        float[] vertices, uint[] indices, uint triCount);
+        float* vertices, uint* indices, uint triCount);
 
     // -- BVH extended query / metrics --------------------------------
 
@@ -105,7 +105,7 @@ internal static class NativeMethods
     public static extern void TBVH_GPU_Destroy(IntPtr bvh);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU_Build(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_GPU_Build(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe int TBVH_GPU_Intersect(IntPtr bvh,
@@ -119,13 +119,13 @@ internal static class NativeMethods
     public static extern int TBVH_GPU_GetTriangleCount(IntPtr bvh);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU_GetNodes(IntPtr bvh, float[] nodeData);
+    public static extern unsafe void TBVH_GPU_GetNodes(IntPtr bvh, float* nodeData);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU_GetPrimitiveIndices(IntPtr bvh, uint[] primIndices);
+    public static extern unsafe void TBVH_GPU_GetPrimitiveIndices(IntPtr bvh, uint* primIndices);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU_GetVertices(IntPtr bvh, float[] vertexData);
+    public static extern unsafe void TBVH_GPU_GetVertices(IntPtr bvh, float* vertexData);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe int TBVH_GPU_IsOccluded(IntPtr bvh,
@@ -140,11 +140,11 @@ internal static class NativeMethods
     // -- GPU BVH extended build methods ------------------------------
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU_BuildHQ(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_GPU_BuildHQ(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU_BuildIndexed(IntPtr bvh,
-        float[] vertices, uint[] indices, uint triCount);
+    public static extern unsafe void TBVH_GPU_BuildIndexed(IntPtr bvh,
+        float* vertices, uint* indices, uint triCount);
 
     // -- 4-wide GPU BVH (LAYOUT_BVH4_GPU) --
 
@@ -155,7 +155,7 @@ internal static class NativeMethods
     public static extern void TBVH_GPU4_Destroy(IntPtr bvh);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU4_Build(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_GPU4_Build(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe int TBVH_GPU4_Intersect(IntPtr bvh,
@@ -169,13 +169,13 @@ internal static class NativeMethods
     public static extern int TBVH_GPU4_GetTriangleCount(IntPtr bvh);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU4_GetNodes(IntPtr bvh, float[] nodeData);
+    public static extern unsafe void TBVH_GPU4_GetNodes(IntPtr bvh, float* nodeData);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU4_GetPrimitiveIndices(IntPtr bvh, uint[] primIndices);
+    public static extern unsafe void TBVH_GPU4_GetPrimitiveIndices(IntPtr bvh, uint* primIndices);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU4_GetVertices(IntPtr bvh, float[] vertexData);
+    public static extern unsafe void TBVH_GPU4_GetVertices(IntPtr bvh, float* vertexData);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe int TBVH_GPU4_IsOccluded(IntPtr bvh,
@@ -187,11 +187,11 @@ internal static class NativeMethods
     // -- GPU4 extended build / query / optimization ------------------
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU4_BuildHQ(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_GPU4_BuildHQ(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_GPU4_BuildIndexed(IntPtr bvh,
-        float[] vertices, uint[] indices, uint triCount);
+    public static extern unsafe void TBVH_GPU4_BuildIndexed(IntPtr bvh,
+        float* vertices, uint* indices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int TBVH_GPU4_LeafCount(IntPtr bvh);
@@ -237,8 +237,8 @@ internal static class NativeMethods
     public static extern void TBVH_BLASInstance_InvertTransform(IntPtr bvh);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_BLASInstance_SetTransform(IntPtr bvh,
-        float[] matrix4x4);
+    public static extern unsafe void TBVH_BLASInstance_SetTransform(IntPtr bvh,
+        float* matrix4x4);
 
     // -- BVH_SoA (Structure of Arrays) --------------------------------
 
@@ -249,7 +249,7 @@ internal static class NativeMethods
     public static extern void TBVH_SoA_Destroy(IntPtr bvh);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_SoA_Build(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_SoA_Build(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void TBVH_SoA_ConvertFrom(IntPtr bvh, IntPtr source);
@@ -281,7 +281,7 @@ internal static class NativeMethods
     public static extern void TBVH_Verbose_ConvertFrom(IntPtr bvh, IntPtr source);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_Verbose_Build(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_Verbose_Build(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int TBVH_Verbose_NodeCount(IntPtr bvh);
@@ -307,10 +307,10 @@ internal static class NativeMethods
     public static extern void TBVH_4CPU_Destroy(IntPtr bvh);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_4CPU_Build(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_4CPU_Build(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_4CPU_BuildHQ(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_4CPU_BuildHQ(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void TBVH_4CPU_ConvertFrom(IntPtr bvh, IntPtr source);
@@ -338,9 +338,9 @@ internal static class NativeMethods
         [MarshalAs(UnmanagedType.LPStr)] string filename);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int TBVH_4CPU_Load(IntPtr bvh,
+    public static extern unsafe int TBVH_4CPU_Load(IntPtr bvh,
         [MarshalAs(UnmanagedType.LPStr)] string filename,
-        float[] vertices, uint triCount);
+        float* vertices, uint triCount);
 
     // -- BVH8_CPU (8-wide, AVX) --------------------------------------
 
@@ -351,10 +351,10 @@ internal static class NativeMethods
     public static extern void TBVH_8CPU_Destroy(IntPtr bvh);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_8CPU_Build(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_8CPU_Build(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_8CPU_BuildHQ(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_8CPU_BuildHQ(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void TBVH_8CPU_ConvertFrom(IntPtr bvh, IntPtr source);
@@ -382,9 +382,9 @@ internal static class NativeMethods
         [MarshalAs(UnmanagedType.LPStr)] string filename);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int TBVH_8CPU_Load(IntPtr bvh,
+    public static extern unsafe int TBVH_8CPU_Load(IntPtr bvh,
         [MarshalAs(UnmanagedType.LPStr)] string filename,
-        float[] vertices, uint triCount);
+        float* vertices, uint triCount);
 
     // -- BVH8_CWBVH (compressed wide BVH) ----------------------------
 
@@ -395,10 +395,10 @@ internal static class NativeMethods
     public static extern void TBVH_8CWBVH_Destroy(IntPtr bvh);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_8CWBVH_Build(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_8CWBVH_Build(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_8CWBVH_BuildHQ(IntPtr bvh, float[] vertices, uint triCount);
+    public static extern unsafe void TBVH_8CWBVH_BuildHQ(IntPtr bvh, float* vertices, uint triCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe int TBVH_8CWBVH_Intersect(IntPtr bvh,
@@ -420,9 +420,9 @@ internal static class NativeMethods
         [MarshalAs(UnmanagedType.LPStr)] string filename);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern int TBVH_8CWBVH_Load(IntPtr bvh,
+    public static extern unsafe int TBVH_8CWBVH_Load(IntPtr bvh,
         [MarshalAs(UnmanagedType.LPStr)] string filename,
-        float[] vertices, uint triCount);
+        float* vertices, uint triCount);
 
     // -- BVH_Double (64-bit double precision) -------------------------
 
@@ -433,7 +433,7 @@ internal static class NativeMethods
     public static extern void TBVH_Double_Destroy(IntPtr bvh);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void TBVH_Double_Build(IntPtr bvh, double[] vertices, ulong primCount);
+    public static extern unsafe void TBVH_Double_Build(IntPtr bvh, double* vertices, ulong primCount);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe int TBVH_Double_Intersect(IntPtr bvh,

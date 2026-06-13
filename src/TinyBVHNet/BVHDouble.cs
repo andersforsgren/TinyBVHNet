@@ -9,35 +9,29 @@ namespace TinyBVHNet;
 /// </summary>
 public class BVHDouble : NativeObject, IBVHDouble
 {
+    /// <summary>Creates a new double-precision BVH instance.</summary>
     public BVHDouble()
         : base(NativeMethods.TBVH_Double_Create(), NativeMethods.TBVH_Double_Destroy)
     {
     }
 
-    /// <summary>
-    /// Build the double-precision BVH from vertex data.
-    /// Each vertex is 3 doubles (x, y, z), each triangle is 3 vertices.
-    /// So vertices.Length should equal primCount * 3 * 3.
-    /// </summary>
-    public void Build(double[] vertices, ulong primCount)
+    /// <inheritdoc/>
+    public unsafe void Build(ReadOnlySpan<double> vertices, ulong primCount)
     {
         if ((ulong)vertices.Length < primCount * 9)
-            throw new ArgumentException($"Vertices array too small. Expected at least {primCount * 9}, got {vertices.Length}.", nameof(vertices));
-        NativeMethods.TBVH_Double_Build(Handle, vertices, primCount);
+            throw new ArgumentException($"Vertices span too small. Expected at least {primCount * 9}, got {vertices.Length}.", nameof(vertices));
+        fixed (double* ptr = vertices)
+            NativeMethods.TBVH_Double_Build(Handle, ptr, primCount);
     }
 
-    /// <summary>
-    /// Intersect a double-precision ray against the BVH.
-    /// </summary>
+    /// <inheritdoc/>
     public unsafe DoubleIntersectionResult? Intersect(Vector3 origin, Vector3 direction, double maxDistance = double.MaxValue)
     {
         return Intersect(origin.X, origin.Y, origin.Z,
                          direction.X, direction.Y, direction.Z, maxDistance);
     }
 
-    /// <summary>
-    /// Intersect a double-precision ray with explicit double coordinates.
-    /// </summary>
+    /// <inheritdoc/>
     public unsafe DoubleIntersectionResult? Intersect(double originX, double originY, double originZ,
                                                        double dirX, double dirY, double dirZ,
                                                        double maxDistance = double.MaxValue)
@@ -53,18 +47,14 @@ public class BVHDouble : NativeObject, IBVHDouble
         return new DoubleIntersectionResult { Distance = t, U = u, V = v, PrimitiveIndex = primIdx };
     }
 
-    /// <summary>
-    /// Shadow ray query -- returns true if the ray to maxDistance is occluded.
-    /// </summary>
+    /// <inheritdoc/>
     public unsafe bool IsOccluded(Vector3 origin, Vector3 direction, double maxDistance = double.MaxValue)
     {
         return IsOccluded(origin.X, origin.Y, origin.Z,
                           direction.X, direction.Y, direction.Z, maxDistance);
     }
 
-    /// <summary>
-    /// Shadow ray query with explicit double-precision coordinates.
-    /// </summary>
+    /// <inheritdoc/>
     public unsafe bool IsOccluded(double originX, double originY, double originZ,
                                    double dirX, double dirY, double dirZ,
                                    double maxDistance = double.MaxValue)
@@ -74,9 +64,7 @@ public class BVHDouble : NativeObject, IBVHDouble
         return NativeMethods.TBVH_Double_IsOccluded(Handle, originPtr, dirPtr, maxDistance) != 0;
     }
 
-    /// <summary>
-    /// Compute the Surface Area Heuristic cost (lower is better).
-    /// </summary>
+    /// <inheritdoc/>
     public double SAHCost(ulong nodeIdx = 0)
     {
         return NativeMethods.TBVH_Double_SAHCost(Handle, nodeIdx);

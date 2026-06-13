@@ -11,27 +11,15 @@ namespace TinyBVHNet;
 /// </summary>
 public interface IBVH : INativeObject, IDisposable
 {
-    /// <summary>
-    /// Build the acceleration structure from triangle vertices.
-    /// Each triangle is 3 float4 vertices (x, y, z, w), so
-    /// vertices.Length should equal triCount * 3 * 4.
-    /// </summary>
-    void Build(float[] vertices, uint triCount);
+    /// <summary>Build the BVH from triangle vertices.</summary>
+    void Build(ReadOnlySpan<float> vertices, uint triCount);
 
-    /// <summary>
-    /// Intersect a ray against the acceleration structure.
-    /// Returns null on miss, or an <see cref="IntersectionResult"/> on hit.
-    /// </summary>
+    /// <summary>Intersect a ray against the BVH.</summary>
     IntersectionResult? Intersect(Vector3 origin, Vector3 direction, float maxDistance = float.MaxValue);
 
-    /// <summary>
-    /// Shadow ray query -- returns true if the ray is occluded by any geometry
-    /// within <paramref name="maxDistance"/>.
-    /// </summary>
+    /// <summary>Returns true if the ray is occluded.</summary>
     bool IsOccluded(Vector3 origin, Vector3 direction, float maxDistance = float.MaxValue);
 
-    /// <summary>
-    /// Compute the Surface Area Heuristic cost (lower is better).
-    /// </summary>
+    /// <summary>Surface Area Heuristic cost (lower is better).</summary>
     float SAHCost(uint nodeIdx = 0);
 }

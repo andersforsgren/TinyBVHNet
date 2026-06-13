@@ -10,48 +10,39 @@ namespace TinyBVHNet
     /// </summary>
     public class BVH4GPU : NativeObject, IBVH
     {
+        /// <summary>Creates a new 4-wide GPU BVH instance.</summary>
         public BVH4GPU()
             : base(NativeMethods.TBVH_GPU4_Create(), NativeMethods.TBVH_GPU4_Destroy)
         {
         }
 
-        /// <summary>
-        /// Build the 4-wide GPU BVH from triangle vertex data.
-        /// </summary>
-        /// <param name="vertices">Interleaved float4 vertices (3 vertices per triangle = triCount * 3 * 4 floats).</param>
-        /// <param name="triCount">Number of triangles.</param>
-        public void Build(float[] vertices, uint triCount)
+        /// <inheritdoc/>
+        public unsafe void Build(ReadOnlySpan<float> vertices, uint triCount)
         {
             if (vertices.Length < triCount * 3 * 4)
-                throw new ArgumentException($"Vertices array too small. Expected at least {triCount * 3 * 4}, got {vertices.Length}.", nameof(vertices));
-            NativeMethods.TBVH_GPU4_Build(Handle, vertices, triCount);
+                throw new ArgumentException($"Vertices span too small. Expected at least {triCount * 3 * 4}, got {vertices.Length}.", nameof(vertices));
+            fixed (float* ptr = vertices)
+                NativeMethods.TBVH_GPU4_Build(Handle, ptr, triCount);
         }
 
-        /// <summary>
-        /// High-quality build (slower, better tree).
-        /// </summary>
-        public void BuildHQ(float[] vertices, uint triCount)
+        /// <summary>High-quality build (slower, better tree).</summary>
+        public unsafe void BuildHQ(ReadOnlySpan<float> vertices, uint triCount)
         {
             if (vertices.Length < triCount * 3 * 4)
-                throw new ArgumentException($"Vertices array too small. Expected at least {triCount * 3 * 4}, got {vertices.Length}.", nameof(vertices));
-            NativeMethods.TBVH_GPU4_BuildHQ(Handle, vertices, triCount);
+                throw new ArgumentException($"Vertices span too small. Expected at least {triCount * 3 * 4}, got {vertices.Length}.", nameof(vertices));
+            fixed (float* ptr = vertices)
+                NativeMethods.TBVH_GPU4_BuildHQ(Handle, ptr, triCount);
         }
 
-        /// <summary>
-        /// Build from indexed triangle data.
-        /// </summary>
-        public void BuildIndexed(float[] vertices, uint[] indices, uint triCount)
+        /// <summary>Build from indexed triangle data.</summary>
+        public unsafe void BuildIndexed(ReadOnlySpan<float> vertices, ReadOnlySpan<uint> indices, uint triCount)
         {
-            NativeMethods.TBVH_GPU4_BuildIndexed(Handle, vertices, indices, triCount);
+            fixed (float* vPtr = vertices)
+            fixed (uint* iPtr = indices)
+                NativeMethods.TBVH_GPU4_BuildIndexed(Handle, vPtr, iPtr, triCount);
         }
 
-        /// <summary>
-        /// Intersect a ray with the 4-wide GPU BVH.
-        /// </summary>
-        /// <param name="origin">Ray origin.</param>
-        /// <param name="direction">Ray direction (normalized).</param>
-        /// <param name="maxDistance">Maximum ray distance.</param>
-        /// <returns>IntersectionResult on hit, null on miss.</returns>
+        /// <inheritdoc/>
         public unsafe IntersectionResult? Intersect(Vector3 origin, Vector3 direction, float maxDistance = 1e30f)
         {
             return IntersectHelper.Intersect(Handle, origin, direction, maxDistance, NativeMethods.TBVH_GPU4_Intersect);
@@ -94,9 +85,17 @@ namespace TinyBVHNet
             var primIndices = new uint[triCount];
             var vertices = new float[triCount * 3 * 4];
 
-            NativeMethods.TBVH_GPU4_GetNodes(Handle, nodes);
-            NativeMethods.TBVH_GPU4_GetPrimitiveIndices(Handle, primIndices);
-            NativeMethods.TBVH_GPU4_GetVertices(Handle, vertices);
+            unsafe
+            {
+                fixed (float* nPtr = nodes)
+                fixed (uint* pPtr = primIndices)
+                fixed (float* vPtr = vertices)
+                {
+                    NativeMethods.TBVH_GPU4_GetNodes(Handle, nPtr);
+                    NativeMethods.TBVH_GPU4_GetPrimitiveIndices(Handle, pPtr);
+                    NativeMethods.TBVH_GPU4_GetVertices(Handle, vPtr);
+                }
+            }
 
             return new GpuBvhData
             {
@@ -108,17 +107,13 @@ namespace TinyBVHNet
             };
         }
 
-        /// <summary>
-        /// Shadow ray query -- returns true if the ray to maxDistance is occluded by any geometry.
-        /// </summary>
+        /// <inheritdoc/>
         public unsafe bool IsOccluded(Vector3 origin, Vector3 direction, float maxDistance = 1e30f)
         {
             return IntersectHelper.IsOccluded(Handle, origin, direction, maxDistance, NativeMethods.TBVH_GPU4_IsOccluded);
         }
 
-        /// <summary>
-        /// Compute the Surface Area Heuristic cost of the BVH tree (lower is better).
-        /// </summary>
+        /// <inheritdoc/>
         public float SAHCost(uint nodeIdx = 0)
         {
             return NativeMethods.TBVH_GPU4_SAHCost(Handle, nodeIdx);
@@ -135,11 +130,7 @@ namespace TinyBVHNet
             }
         }
 
-        /// <summary>
-        /// Optimize the BVH tree structure to reduce SAH cost.
-        /// </summary>
-        /// <param name="iterations">Number of optimization iterations (default 25).</param>
-        /// <param name="extreme">If true, uses extreme (slower) optimization strategy.</param>
+        /// <summary>Optimize the BVH tree structure.</summary>
         public void Optimize(uint iterations = 25, bool extreme = false)
         {
             NativeMethods.TBVH_GPU4_Optimize(Handle, iterations, extreme ? 1 : 0);

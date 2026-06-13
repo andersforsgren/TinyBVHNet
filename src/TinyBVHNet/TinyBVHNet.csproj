@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net48;net8.0</TargetFrameworks>
+		<TargetFrameworks>net48;net10.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<LangVersion>12</LangVersion>
@@ -38,6 +38,11 @@
 		<None Include="../../build/libTinyBVHNetNative-arm64.so" Condition="Exists('../../build/libTinyBVHNetNative-arm64.so')" Pack="true" PackagePath="runtimes/linux-arm64/native/libTinyBVHNetNative.so" />
 	</ItemGroup>
 
+	<!-- System.Memory for Span<T> support on net48 -->
+	<ItemGroup>
+		<PackageReference Include="System.Memory" Version="4.5.5" Condition="'$(TargetFramework)' == 'net48'" />
+	</ItemGroup>
+
 	<!-- MinVer: version from git tags -->
 	<ItemGroup>
 		<PackageReference Include="MinVer" Version="6.0.0" PrivateAssets="All" />
@@ -47,8 +52,8 @@
 	<ItemGroup>
 		<None Include="build\TinyBVHNet.targets" Pack="true" PackagePath="build\net48\TinyBVHNet.targets" />
 		<None Include="build\TinyBVHNet.targets" Pack="true" PackagePath="buildTransitive\net48\TinyBVHNet.targets" />
-		<None Include="build\TinyBVHNet.targets" Pack="true" PackagePath="build\net8.0\TinyBVHNet.targets" />
-		<None Include="build\TinyBVHNet.targets" Pack="true" PackagePath="buildTransitive\net8.0\TinyBVHNet.targets" />
+		<None Include="build\TinyBVHNet.targets" Pack="true" PackagePath="build\net10.0\TinyBVHNet.targets" />
+				<None Include="build\TinyBVHNet.targets" Pack="true" PackagePath="buildTransitive\net10.0\TinyBVHNet.targets" />
 	</ItemGroup>
 
 </Project>

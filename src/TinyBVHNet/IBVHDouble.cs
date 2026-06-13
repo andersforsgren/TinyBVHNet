@@ -10,17 +10,10 @@ namespace TinyBVHNet;
 /// </summary>
 public interface IBVHDouble : INativeObject, IDisposable
 {
-    /// <summary>
-    /// Build the acceleration structure from triangle vertices in double precision.
-    /// Each vertex is 3 doubles (x, y, z), each triangle is 3 vertices.
-    /// vertices.Length should equal primCount * 9.
-    /// </summary>
-    void Build(double[] vertices, ulong primCount);
+    /// <summary>Build the double-precision BVH from triangle vertices.</summary>
+    void Build(ReadOnlySpan<double> vertices, ulong primCount);
 
-    /// <summary>
-    /// Intersect a ray against the acceleration structure using double-precision
-    /// coordinates. Returns null on miss, or a <see cref="DoubleIntersectionResult"/> on hit.
-    /// </summary>
+    /// <summary>Intersect a ray against the BVH.</summary>
     DoubleIntersectionResult? Intersect(Vector3 origin, Vector3 direction, double maxDistance = double.MaxValue);
 
     /// <summary>
@@ -31,10 +24,7 @@ public interface IBVHDouble : INativeObject, IDisposable
                                         double dirX, double dirY, double dirZ,
                                         double maxDistance = double.MaxValue);
 
-    /// <summary>
-    /// Shadow ray query -- returns true if the ray is occluded by any geometry
-    /// within <paramref name="maxDistance"/>.
-    /// </summary>
+    /// <summary>Returns true if the ray is occluded.</summary>
     bool IsOccluded(Vector3 origin, Vector3 direction, double maxDistance = double.MaxValue);
 
     /// <summary>
@@ -44,8 +34,6 @@ public interface IBVHDouble : INativeObject, IDisposable
                     double dirX, double dirY, double dirZ,
                     double maxDistance = double.MaxValue);
 
-    /// <summary>
-    /// Compute the Surface Area Heuristic cost (lower is better).
-    /// </summary>
+    /// <summary>Surface Area Heuristic cost (lower is better).</summary>
     double SAHCost(ulong nodeIdx = 0);
 }

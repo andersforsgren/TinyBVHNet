@@ -2,7 +2,7 @@
   <!--
     TinyBVHNet.targets
     Deploys the correct native TinyBVHNetNative library to the output directory.
-    Supports: net48 (Windows-only), net8.0 (cross-platform with RID fallback).
+    Supports: net48 (Windows-only), net10.0 (cross-platform with RID fallback).
   -->
 
   <!-- Detect current OS for RID-less builds -->
@@ -39,7 +39,7 @@
              Visible="false" />
   </ItemGroup>
 
-  <!-- net8.0+: RID-aware copy from runtimes/ -->
+  <!-- net10.0+: RID-aware copy from runtimes/ -->
   <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
     <Content Include="$(MSBuildThisFileDirectory)..\..\runtimes\$(_TinyBVHNetRid)\native\*"
              CopyToOutputDirectory="PreserveNewest"

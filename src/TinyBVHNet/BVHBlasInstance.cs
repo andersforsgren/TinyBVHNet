@@ -27,11 +27,12 @@ public class BVHBlasInstance : NativeObject
         NativeMethods.TBVH_BLASInstance_InvertTransform(Handle);
     }
 
-    /// <summary>Set a 4x4 column-major transform matrix (16 floats).</summary>
-    public void SetTransform(float[] matrix4x4)
+    /// <summary>Set a 4x4 column-major transform matrix.</summary>
+    public unsafe void SetTransform(ReadOnlySpan<float> matrix4x4)
     {
         if (matrix4x4.Length < 16)
             throw new ArgumentException("Matrix must have 16 elements.", nameof(matrix4x4));
-        NativeMethods.TBVH_BLASInstance_SetTransform(Handle, matrix4x4);
+        fixed (float* ptr = matrix4x4)
+            NativeMethods.TBVH_BLASInstance_SetTransform(Handle, ptr);
     }
 }
