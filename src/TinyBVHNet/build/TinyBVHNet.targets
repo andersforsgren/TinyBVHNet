@@ -12,9 +12,10 @@
     <_TinyBVHNetIsOSX     Condition="$([MSBuild]::IsOSPlatform('OSX'))">true</_TinyBVHNetIsOSX>
   </PropertyGroup>
 
-  <!-- Resolve runtime identifier: explicit RID -> OS detection -> default -->
+  <!-- Resolve runtime identifier: explicit RID -> OS detection -> default
+       net48: skip $(RuntimeIdentifier) because it defaults to win-x86; always use win-x64 -->
   <PropertyGroup>
-    <_TinyBVHNetRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</_TinyBVHNetRid>
+    <_TinyBVHNetRid Condition="'$(TargetFrameworkIdentifier)' != '.NETFramework' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</_TinyBVHNetRid>
     <_TinyBVHNetRid Condition="'$(_TinyBVHNetRid)' == '' and '$(_TinyBVHNetIsWindows)' == 'true' and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">win-arm64</_TinyBVHNetRid>
     <_TinyBVHNetRid Condition="'$(_TinyBVHNetRid)' == '' and '$(_TinyBVHNetIsWindows)' == 'true'">win-x64</_TinyBVHNetRid>
     <_TinyBVHNetRid Condition="'$(_TinyBVHNetRid)' == '' and '$(_TinyBVHNetIsLinux)'   == 'true' and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">linux-arm64</_TinyBVHNetRid>
