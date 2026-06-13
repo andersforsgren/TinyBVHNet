@@ -33,7 +33,7 @@ jobs:
             arch: ARM64
             rid: win-arm64
             native_name: TinyBVHNetNative-arm64.dll
-            cmake_generator: "MinGW Makefiles"
+            cmake_generator: "Ninja"
             test_frameworks: ""
             run_tests: false  # can't run arm64 native on x64 runner
           - name: Linux x64
@@ -91,17 +91,19 @@ jobs:
 
       - name: Install MinGW ARM64 cross-compiler (Windows)
         if: runner.os == 'Windows' && matrix.arch == 'ARM64'
-        run: C:\msys64\usr\bin\pacman.exe -S --noconfirm mingw-w64-cross-aarch64-gcc
+        run: |
+          Write-Host "Using MSVC ARM64 cross-compilation via Developer Command Prompt"
 
       - name: Configure CMake (Windows arm64)
         if: runner.os == 'Windows' && matrix.arch == 'ARM64'
+        shell: cmd
         run: |
-          cmake -B ${{ github.workspace }}/native/build `
-            -G "${{ matrix.cmake_generator }}" `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_CXX_COMPILER=aarch64-w64-mingw32-g++ `
-            -DCMAKE_C_COMPILER=aarch64-w64-mingw32-gcc `
-            -S ${{ github.workspace }}/native
+          call "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
+          REM Auto-detect VS generator from environment
+          cmake -B %GITHUB_WORKSPACE%\native\build ^
+            -A ARM64 ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -S %GITHUB_WORKSPACE%\native
 
       - name: Install ARM64 cross-compiler (Linux)
         if: runner.os == 'Linux' && matrix.arch == 'ARM64'
