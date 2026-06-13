@@ -1,6 +1,0 @@
-# Simple triangle facing camera for BVH banding diagnostics
-v -2 -2 0
-v  2 -2 0
-v  0  2 0
-vn 0 0 1
-f 1//1 2//1 3//1
